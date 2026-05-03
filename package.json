@@ -1,0 +1,28 @@
+{
+  "name": "meetwave-ai",
+  "version": "1.0.0",
+  "description": "Premium AI-powered meeting wave generation and management platform.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "client": "live-server client"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.6",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.23.1",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "openai": "^6.35.0",
+    "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

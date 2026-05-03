@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetWave AI | Outfit Analysis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen font-sans selection:bg-purple-500 selection:text-white">
+
+  <nav class="w-full p-6 flex justify-center border-b border-white/10">
+    <h1 class="text-2xl font-bold tracking-tighter bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
+      MeetWave AI
+    </h1>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center">
+    
+    <div class="text-center mb-10">
+      <h2 class="text-4xl font-extrabold mb-4">Discover Your Perfect Aesthetic</h2>
+      <p class="text-gray-400 max-w-lg mx-auto">Upload a portrait to instantly visualize yourself in premium, AI-generated styles tailored to your look.</p>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="uploadSection" class="w-full max-w-md glass rounded-2xl p-8 flex flex-col items-center justify-center border-dashed border-2 border-gray-600 hover:border-purple-500 transition-colors">
+      <input type="file" id="fileInput" accept="image/*" class="hidden" />
+      <label for="fileInput" class="cursor-pointer flex flex-col items-center text-gray-400 hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <span class="font-medium text-lg">Click to Upload Portrait</span>
+        <span class="text-sm mt-1">JPEG, PNG up to 5MB</span>
+      </label>
+      
+      <!-- Removed onclick, added type="button" -->
+      <button type="button" id="uploadBtn" class="mt-6 w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all hidden">
+        Generate Styles
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden flex-col items-center mt-12 w-full max-w-2xl text-center py-10">
+      <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
+      <h3 id="loadingText" class="text-xl font-semibold animate-pulse text-purple-400">Uploading your portrait...</h3>
+      <p class="text-gray-500 mt-2">Check the browser console for live logs.</p>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden w-full mt-12 flex-col items-center">
+      <h3 class="text-2xl font-bold mb-8">Your Free Preview</h3>
+      <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full"></div>
+    </div>
+
+    <!-- Unlock Section -->
+    <div id="unlockSection" class="hidden mt-16 text-center w-full max-w-2xl glass p-10 rounded-3xl relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-48 h-48 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+      
+      <h3 class="text-3xl font-bold relative z-10 mb-4">Unlock Your Full Style Report</h3>
+      <p class="text-gray-300 relative z-10 mb-8">Get 9 more premium styles including Korean, Old Money, and Cyberpunk in ultra-HD.</p>
+      
+      <button type="button" id="unlock-btn" class="relative z-10 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-400 hover:to-blue-500 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-purple-500/30 transition-transform transform hover:scale-105">
+        Unlock for ₹19
+      </button>
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
