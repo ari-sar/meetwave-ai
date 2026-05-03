@@ -108,12 +108,14 @@ async function prepareImageForEdit(imagePath) {
   const isSquare = meta.width === meta.height;
   const underLimit = stats.size < 4 * 1024 * 1024;
 
-  if (isPng && isSquare && underLimit) return imagePath;
+  const hasAlpha = meta.hasAlpha;
+  if (isPng && isSquare && underLimit && hasAlpha) return imagePath;
 
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
   const size = Math.min(1024, Math.min(meta.width, meta.height));
   await sharp(imagePath)
     .resize(size, size, { fit: "cover", position: "centre" })
+    .ensureAlpha()
     .png({ compressionLevel: 9 })
     .toFile(outPath);
   console.log(`🖼️  Converted upload to square PNG: ${outPath}`);
