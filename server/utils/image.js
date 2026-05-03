@@ -1,6 +1,8 @@
 const OpenAI = require("openai");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
+const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 
 const openai = new OpenAI({
@@ -98,12 +100,30 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
   }
 }
 
+async function prepareImageForEdit(imagePath) {
+  const meta = await sharp(imagePath).metadata();
+  const stats = fs.statSync(imagePath);
+  const isPng = meta.format === "png";
+  const isSquare = meta.width === meta.height;
+  const underLimit = stats.size < 4 * 1024 * 1024;
+
+  if (isPng && isSquare && underLimit) return imagePath;
+
+  const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
+  const size = Math.min(1024, Math.min(meta.width, meta.height));
+  await sharp(imagePath)
+    .resize(size, size, { fit: "cover", position: "centre" })
+    .png({ compressionLevel: 9 })
+    .toFile(outPath);
+  console.log(`🖼️  Converted upload to square PNG: ${outPath}`);
+  return outPath;
+}
+
 async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
   try {
-    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with gpt-image-1...`);
+    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with dall-e-2...`);
 
-    const imageData = fs.readFileSync(imagePath);
-    const base64Image = imageData.toString("base64");
+    const preparedPath = await prepareImageForEdit(imagePath);
 
     const generationPromises = stylesToGenerate.map(async (styleName) => {
       try {
@@ -112,7 +132,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
 
         const response = await openai.images.edit({
           model: "dall-e-2",
-          image: fs.createReadStream(imagePath),
+          image: fs.createReadStream(preparedPath),
           prompt: prompt,
           n: 1,
           size: "1024x1024",
