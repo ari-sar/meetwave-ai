@@ -112,7 +112,7 @@ async function prepareImageForEdit(imagePath) {
   if (isPng && isSquare && underLimit && hasAlpha) return imagePath;
 
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
-  const size = Math.min(1024, Math.min(meta.width, meta.height));
+  const size = Math.min(256, Math.min(meta.width, meta.height));
   await sharp(imagePath)
     .resize(size, size, { fit: "cover", position: "centre" })
     .ensureAlpha()
@@ -139,7 +139,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
           image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
           prompt: prompt,
           n: 1,
-          size: "1024x1024",
+          size: "256x256",
           response_format: "b64_json"
         });
 
