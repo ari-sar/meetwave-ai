@@ -148,24 +148,19 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
 
 async function generatePreview(imagePath) {
   try {
-    console.log("📸 Starting free preview generation (1 fixed-style image)...");
+    console.log("📸 Starting full comparison generation (single AI call, all 12 styles)...");
 
     const analysis = await analyzePortrait(imagePath);
     const sessionId = uuidv4();
     const preparedPath = await prepareImageForEdit(imagePath);
 
-    const description = STYLE_DESCRIPTIONS[FREE_TIER_STYLE];
-    const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
+    console.log(`🎨 Generating comparison card with all 12 styles...`);
+    const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
 
-    console.log(`🎨 Generating preview in fixed style: ${FREE_TIER_STYLE}`);
-    const { url: previewUrl } = await runImageEdit(preparedPath, prompt, sessionId, "preview.png");
-
-    console.log("✅ Free preview generated");
+    console.log("✅ Comparison card generated");
     return {
       sessionId,
-      preparedPath,
-      previewStyle: FREE_TIER_STYLE,
-      previewUrl,
+      comparisonUrl,
       allStyles: ALL_STYLES,
       ratings: analysis.ratings,
       bestMatch: analysis.bestMatch,
@@ -177,16 +172,4 @@ async function generatePreview(imagePath) {
   }
 }
 
-async function generateFull(preparedPath, sessionId) {
-  try {
-    console.log("🎨 Generating paid comparison card (single image, all 12 styles)...");
-    const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
-    console.log("✅ Comparison card generated");
-    return { comparisonUrl };
-  } catch (error) {
-    console.error("❌ Full generation failed:", error.message);
-    throw error;
-  }
-}
-
-module.exports = { generatePreview, generateFull };
+module.exports = { generatePreview };

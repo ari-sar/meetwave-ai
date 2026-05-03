@@ -26,48 +26,30 @@ function getFingerprint() {
   );
 }
 
-// Free render: 12-card grid; only previewStyle card is real, others blurred
-function renderGrid(data) {
-  const container = document.getElementById("resultsGrid");
-  container.innerHTML = "";
-  container.className = "grid grid-cols-4 gap-3 w-full";
-
-  data.allStyles.forEach(style => {
-    const isPreview = style === data.previewStyle;
-    const rating = (data.ratings && data.ratings[style]) || "average";
-
-    let ratingBg, ratingText, ratingIcon;
-    if (rating === "recommended") {
-      ratingBg = "bg-[#C8E6C9]"; ratingText = "text-[#398E4B]"; ratingIcon = "✓";
-    } else if (rating === "average") {
-      ratingBg = "bg-[#FFE082]"; ratingText = "text-[#BF741F]"; ratingIcon = "–";
-    } else {
-      ratingBg = "bg-[#FFCDD2]"; ratingText = "text-[#C62828]"; ratingIcon = "✕";
-    }
-
-    const cardElement = document.createElement("div");
-    cardElement.className = `relative rounded-lg overflow-hidden glass shadow-lg aspect-[3/4] flex flex-col transition-all duration-300 ${isPreview ? "" : "blur-md"}`;
-
-    cardElement.innerHTML = `
-      <div class="w-full text-center py-1.5 text-xs font-bold uppercase tracking-wider bg-[#424242] text-white">${style}</div>
-      <div class="flex-grow w-full relative overflow-hidden bg-gray-300">
-        ${isPreview ? `<img src="${data.previewUrl}" class="w-full h-full object-cover" alt="${style}">` : `<div class="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500"></div>`}
-        ${!isPreview ? `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40"><svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M5 9a2 2 0 114 0 2 2 0 01-4 0z"/><path fill-rule="evenodd" d="M0 10a10 10 0 1120 0 10 10 0 01-20 0zm10-8a2 2 0 100 4 2 2 0 000-4zm0 10a4 4 0 100-8 4 4 0 000 8z"/></svg></div>` : ""}
-      </div>
-      <div class="w-full flex items-center justify-center gap-1 py-1.5 text-xs font-bold ${ratingBg}">
-        <span>${ratingIcon}</span><span class="${ratingText}">${rating.toUpperCase()}</span>
-      </div>
-    `;
-    container.appendChild(cardElement);
-  });
-}
-
-// Paid render: replace grid with single comparison image
-function renderComparison(comparisonUrl) {
+// Render comparison card: full image blurred, with top-left 1/12 cell unblurred as the free preview
+function renderComparison(data) {
   const container = document.getElementById("resultsGrid");
   container.innerHTML = "";
   container.className = "w-full flex justify-center";
-  container.innerHTML = `<img src="${comparisonUrl}" class="w-full max-w-3xl rounded-xl shadow-2xl" alt="Outfit comparison card">`;
+  container.innerHTML = `
+    <div id="comparisonWrapper" class="relative w-full max-w-3xl rounded-xl overflow-hidden shadow-2xl">
+      <img id="comparisonBg" src="${data.comparisonUrl}" class="w-full block transition-all duration-500" style="filter: blur(20px); transform: scale(1.05);" alt="Outfit comparison card">
+      <img id="comparisonPeek" src="${data.comparisonUrl}" class="absolute inset-0 w-full block" style="clip-path: inset(0 75% 66.67% 0);" alt="Free preview cell">
+      <div id="lockOverlay" class="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none">
+        <div class="mb-6 px-4 py-2 bg-black/70 rounded-full text-white text-sm font-semibold">🔒 Unlock to reveal all 12 styles</div>
+      </div>
+    </div>
+  `;
+}
+
+// On payment: remove blur, hide the peek crop and lock overlay
+function unlockComparison() {
+  const bg = document.getElementById("comparisonBg");
+  const peek = document.getElementById("comparisonPeek");
+  const lock = document.getElementById("lockOverlay");
+  if (bg) { bg.style.filter = "none"; bg.style.transform = "none"; }
+  if (peek) peek.remove();
+  if (lock) lock.remove();
 }
 
 // Render best match + tips section
@@ -173,7 +155,7 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
     document.getElementById("resultsSection").classList.remove("hidden");
     document.getElementById("resultsSection").classList.add("flex");
 
-    renderGrid(data);
+    renderComparison(data);
     renderMetadata(data);
 
     // Show unlock section
@@ -189,37 +171,12 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   }
 });
 
-// Unlock button handler (simulating payment success)
-document.getElementById('unlockBtn')?.addEventListener('click', async function() {
+// Unlock button: client-side only — no API call. Removes blur from already-generated image.
+document.getElementById('unlockBtn')?.addEventListener('click', function() {
   if (!currentSessionId) return alert("Session expired. Please upload again.");
-
+  unlockComparison();
+  this.textContent = "All styles unlocked!";
   this.disabled = true;
-  this.textContent = "Generating full report...";
-
-  try {
-    const res = await fetch("http://localhost:5000/api/generate/full", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: currentSessionId })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Generation failed");
-    }
-
-    renderComparison(data.comparisonUrl);
-
-    this.textContent = "All styles unlocked!";
-    this.disabled = true;
-
-  } catch (error) {
-    console.error("Error:", error);
-    alert(`Error: ${error.message}`);
-    this.disabled = false;
-    this.textContent = "Unlock Full Report";
-  }
 });
 
 // Store data in localStorage for re-rendering after full generation
