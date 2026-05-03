@@ -129,6 +129,12 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
     const preparedPath = await prepareImageForEdit(imagePath);
     const preparedBuffer = fs.readFileSync(preparedPath);
 
+    const maskPath = path.join(os.tmpdir(), `mask-${uuidv4()}.png`);
+    await sharp({
+      create: { width: 256, height: 256, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+    }).png().toFile(maskPath);
+    const maskBuffer = fs.readFileSync(maskPath);
+
     const generationPromises = stylesToGenerate.map(async (styleName) => {
       try {
         const description = STYLE_DESCRIPTIONS[styleName];
@@ -137,6 +143,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
         const response = await openai.images.edit({
           model: "dall-e-2",
           image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
+          mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
           prompt: prompt,
           n: 1,
           size: "256x256",
