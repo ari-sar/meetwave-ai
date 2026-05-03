@@ -108,14 +108,11 @@ async function prepareImageForEdit(imagePath) {
   const isSquare = meta.width === meta.height;
   const underLimit = stats.size < 4 * 1024 * 1024;
 
-  const hasAlpha = meta.hasAlpha;
-  if (isPng && isSquare && underLimit && hasAlpha) return imagePath;
+  if (isPng && underLimit) return imagePath;
 
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
-  const size = Math.min(1024, Math.min(meta.width, meta.height));
   await sharp(imagePath)
-    .resize(size, size, { fit: "cover", position: "centre" })
-    .ensureAlpha()
+    .resize(1024, 1536, { fit: "cover", position: "centre" })
     .png({ compressionLevel: 9 })
     .toFile(outPath);
   console.log(`🖼️  Converted upload to square PNG: ${outPath}`);
@@ -139,7 +136,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
           image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
           prompt: prompt,
           n: 1,
-          size: "1024x1024"
+          size: "1024x1536"
         });
 
         const b64 = response.data[0].b64_json;
