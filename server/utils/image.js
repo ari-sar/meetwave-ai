@@ -1,4 +1,5 @@
 const OpenAI = require("openai");
+const { toFile } = require("openai");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -124,6 +125,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
     console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with dall-e-2...`);
 
     const preparedPath = await prepareImageForEdit(imagePath);
+    const preparedBuffer = fs.readFileSync(preparedPath);
 
     const generationPromises = stylesToGenerate.map(async (styleName) => {
       try {
@@ -132,7 +134,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
 
         const response = await openai.images.edit({
           model: "dall-e-2",
-          image: fs.createReadStream(preparedPath),
+          image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
           prompt: prompt,
           n: 1,
           size: "1024x1024",
