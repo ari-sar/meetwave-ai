@@ -11,7 +11,13 @@
       "Bash(Start-Sleep -Seconds 3)",
       "Bash(Get-Content \"C:\\\\Users\\\\ari\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\e--production-meetwave-ai\\\\9a57ecc6-d795-4441-8085-169a80beca7d\\\\tasks\\\\bypwf591v.output\" -Tail 5)",
       "Bash(curl -s http://localhost:5000/api/generate)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm list *)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "PowerShell(grep node)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)"
     ]
   },
   "hooks": {

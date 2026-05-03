@@ -1,57 +1,227 @@
 const OpenAI = require("openai");
+const fs = require("fs");
+const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// We still accept imagePath from the route, but we won't pass it to OpenAI for now
-async function generatePreview(imagePath) {
+const ALL_STYLES = [
+  "Korean",
+  "Streetwear",
+  "Tea-Toned",
+  "Chic",
+  "Chanel-Inspired",
+  "Soft Feminine",
+  "Baddie",
+  "Niche/Indie",
+  "Vintage",
+  "Preppy/Academia",
+  "Sporty",
+  "Old Money"
+];
+
+const STYLE_DESCRIPTIONS = {
+  "Korean": "minimalist Korean fashion with clean lines, earthy tones, and effortless elegance",
+  "Streetwear": "trendy urban streetwear with oversized silhouettes and bold graphics",
+  "Tea-Toned": "warm tea-toned earth tones with vintage-inspired cuts",
+  "Chic": "sophisticated chic style with tailored fits and neutral palette",
+  "Chanel-Inspired": "classic Chanel-inspired luxury with tweed and pearls",
+  "Soft Feminine": "soft feminine style with delicate fabrics and pastel colors",
+  "Baddie": "bold baddie aesthetic with dark colors and edgy attitude",
+  "Niche/Indie": "indie alternative style with vintage band tees and eclectic pieces",
+  "Vintage": "classic vintage style from the 1970s-1990s era",
+  "Preppy/Academia": "preppy academia style with structured blazers and classic cuts",
+  "Sporty": "athletic sporty style with performance wear and casual comfort",
+  "Old Money": "old money quiet luxury style with understated elegance and expensive basics"
+};
+
+async function analyzePortrait(imagePath) {
   try {
-    console.log("MVP Mode: Using standard DALL-E 2 for system plumbing...");
+    console.log("🔍 Analyzing portrait with GPT-4o vision...");
 
-    const styles = [
-      "trendy urban streetwear, oversized hoodie, cargo pants",
-      "preppy academia clothing, tweed blazer, turtleneck",
-      "sleek athletic athleisure wear, running jacket"
-    ];
+    const imageData = fs.readFileSync(imagePath);
+    const base64Image = imageData.toString("base64");
 
-    // Generate the 3 style images in parallel
-    const generationPromises = styles.map(async (style) => {
-      // Standard text-to-image prompt without vision/face mapping
-      const prompt = `A highly realistic fashion photography portrait of a person wearing ${style}. Clean studio lighting, photorealistic, premium aesthetic.`;
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`
+              }
+            },
+            {
+              type: "text",
+              text: `Analyze this person's features (skin tone, face shape, style cues, etc.) and rate how well each of these 12 fashion styles would suit them.
 
-      try {
-        const response = await openai.images.generate({
-          model: "dall-e-2", // Cheap, fast, universally available
-          prompt: prompt,
-          n: 1,
-          size: "512x512" // Keeping it small to save you API credits during testing
-        });
+Styles: ${ALL_STYLES.join(", ")}
 
-        // Return the standard URL
-        return response.data[0].url;
-        
-      } catch (error) {
-        console.error(`OpenAI MVP Generation Error for style [${style}]:`, error.message);
-        return null; 
-      }
+Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+{
+  "ratings": {
+    "Korean": "recommended",
+    "Streetwear": "recommended",
+    ...
+  },
+  "bestMatch": ["Korean", "Tea-Toned", "Chic", "Streetwear", "Preppy/Academia"],
+  "tips": [
+    "Keep hair volume natural and slightly tousled",
+    "Earth tones & neutrals suit you best",
+    "Well-groomed appearance enhances overall look"
+  ]
+}
+
+Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 styles. Tips should be 3 specific grooming/style tips.`
+            }
+          ]
+        }
+      ]
     });
 
-    const results = await Promise.all(generationPromises);
-    
-    // Filter out any nulls
-    const validResults = results.filter(url => url !== null);
+    const analysisText = response.choices[0].message.content;
+    const analysis = JSON.parse(analysisText);
 
-    if (validResults.length === 0) {
-      throw new Error("All MVP OpenAI generations failed.");
-    }
-
-    return validResults;
-
+    console.log("✅ Analysis complete");
+    return analysis;
   } catch (error) {
-    console.error("Critical error in generatePreview MVP:", error.message);
+    console.error("❌ Portrait analysis failed:", error.message);
     throw error;
   }
 }
 
-module.exports = { generatePreview };
+async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
+  try {
+    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with gpt-image-1...`);
+
+    const imageData = fs.readFileSync(imagePath);
+    const base64Image = imageData.toString("base64");
+
+    const generationPromises = stylesToGenerate.map(async (styleName) => {
+      try {
+        const description = STYLE_DESCRIPTIONS[styleName];
+        const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
+
+        const response = await openai.images.edit({
+          model: "gpt-image-1",
+          image: imageData,
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024",
+          response_format: "b64_json"
+        });
+
+        const b64 = response.data[0].b64_json;
+        const filename = `${styleName.toLowerCase().replace(/\//g, "-")}.png`;
+        const filepath = path.join("uploads", "generated", sessionId, filename);
+
+        // Ensure directory exists
+        const dir = path.dirname(filepath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+
+        // Save base64 as PNG
+        fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
+
+        return {
+          style: styleName,
+          url: `/generated/${sessionId}/${filename}`,
+          imagePath: filepath
+        };
+      } catch (error) {
+        console.error(`❌ Generation failed for ${styleName}:`, error.message);
+        return null;
+      }
+    });
+
+    const results = await Promise.allSettled(generationPromises);
+    const validResults = results
+      .map(r => r.status === "fulfilled" ? r.value : null)
+      .filter(r => r !== null);
+
+    if (validResults.length === 0) {
+      throw new Error("All image generations failed");
+    }
+
+    console.log(`✅ Generated ${validResults.length}/${stylesToGenerate.length} images`);
+    return validResults;
+  } catch (error) {
+    console.error("❌ Image generation error:", error.message);
+    throw error;
+  }
+}
+
+async function generatePreview(imagePath) {
+  try {
+    console.log("📸 Starting free preview generation (3 images)...");
+
+    // Step 1: Analyze portrait
+    const analysis = await analyzePortrait(imagePath);
+
+    // Step 2: Pick 1 recommended, 1 average, 1 avoid
+    const ratings = analysis.ratings;
+    const recommended = Object.keys(ratings).find(s => ratings[s] === "recommended");
+    const average = Object.keys(ratings).find(s => ratings[s] === "average");
+    const avoid = Object.keys(ratings).find(s => ratings[s] === "avoid");
+
+    const stylesToGenerate = [recommended, average, avoid].filter(Boolean);
+
+    // Step 3: Generate session directory
+    const sessionId = uuidv4();
+    const generatedImages = await generateImagesForStyles(imagePath, stylesToGenerate, sessionId);
+
+    // Step 4: Add ratings to each image
+    const previewsWithRatings = generatedImages.map(img => ({
+      ...img,
+      rating: ratings[img.style]
+    }));
+
+    return {
+      sessionId,
+      previews: previewsWithRatings,
+      allStyles: ALL_STYLES,
+      ratings,
+      bestMatch: analysis.bestMatch,
+      tips: analysis.tips
+    };
+  } catch (error) {
+    console.error("❌ Preview generation failed:", error.message);
+    throw error;
+  }
+}
+
+async function generateFull(imagePath, sessionId, ratings) {
+  try {
+    console.log("🎨 Generating remaining 9 images for paid tier...");
+
+    const previewedStyles = new Set();
+    const generatedDir = path.join("uploads", "generated", sessionId);
+
+    if (fs.existsSync(generatedDir)) {
+      fs.readdirSync(generatedDir).forEach(file => {
+        const styleName = file.replace(".png", "").replace(/-/g, "/");
+        previewedStyles.add(styleName);
+      });
+    }
+
+    const remainingStyles = ALL_STYLES.filter(s => !previewedStyles.has(s));
+
+    const fullImages = await generateImagesForStyles(imagePath, remainingStyles, sessionId);
+
+    return fullImages.map(img => ({
+      ...img,
+      rating: ratings[img.style]
+    }));
+  } catch (error) {
+    console.error("❌ Full generation failed:", error.message);
+    throw error;
+  }
+}
+
+module.exports = { generatePreview, generateFull };

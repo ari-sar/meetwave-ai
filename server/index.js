@@ -2,11 +2,22 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Create uploads/generated directory if it doesn't exist
+const generatedDir = path.join(__dirname, "..", "uploads", "generated");
+if (!fs.existsSync(generatedDir)) {
+  fs.mkdirSync(generatedDir, { recursive: true });
+}
+
+// Static serving for generated images
+app.use("/generated", express.static(path.join(__dirname, "..", "uploads", "generated")));
 
 // routes
 app.use("/api/generate", require("./routes/generate"));
