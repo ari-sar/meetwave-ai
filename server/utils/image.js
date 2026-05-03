@@ -39,13 +39,13 @@ const STYLE_DESCRIPTIONS = {
 
 async function analyzePortrait(imagePath) {
   try {
-    console.log("🔍 Analyzing portrait with GPT-4-turbo vision...");
+    console.log("🔍 Analyzing portrait with GPT-4o vision...");
 
     const imageData = fs.readFileSync(imagePath);
     const base64Image = imageData.toString("base64");
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
@@ -58,7 +58,7 @@ async function analyzePortrait(imagePath) {
             },
             {
               type: "text",
-              text: `Analyze this person's features (skin tone, face shape, style cues, etc.) and rate how well each of these 12 fashion styles would suit them.
+              text: `You are a fashion stylist assistant. Based on the general visual cues in this photo (overall coloring, hair, clothing style), suggest which of these 12 fashion aesthetics would visually complement the look. This is a styling recommendation tool, not a personal analysis.
 
 Styles: ${ALL_STYLES.join(", ")}
 
@@ -85,7 +85,7 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
     });
 
     const analysisText = response.choices[0].message.content;
-    console.log("Raw response from GPT-4-turbo:", analysisText);
+    console.log("Raw response from GPT-4o:", analysisText);
     const analysis = JSON.parse(analysisText);
 
     console.log("✅ Analysis complete");
