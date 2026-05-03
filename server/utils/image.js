@@ -112,7 +112,7 @@ async function prepareImageForEdit(imagePath) {
   if (isPng && isSquare && underLimit && hasAlpha) return imagePath;
 
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
-  const size = Math.min(256, Math.min(meta.width, meta.height));
+  const size = Math.min(1024, Math.min(meta.width, meta.height));
   await sharp(imagePath)
     .resize(size, size, { fit: "cover", position: "centre" })
     .ensureAlpha()
@@ -124,16 +124,10 @@ async function prepareImageForEdit(imagePath) {
 
 async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
   try {
-    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with dall-e-2...`);
+    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with gpt-image-1...`);
 
     const preparedPath = await prepareImageForEdit(imagePath);
     const preparedBuffer = fs.readFileSync(preparedPath);
-
-    const maskPath = path.join(os.tmpdir(), `mask-${uuidv4()}.png`);
-    await sharp({
-      create: { width: 256, height: 256, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
-    }).png().toFile(maskPath);
-    const maskBuffer = fs.readFileSync(maskPath);
 
     const generationPromises = stylesToGenerate.map(async (styleName) => {
       try {
@@ -141,13 +135,11 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
         const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
 
         const response = await openai.images.edit({
-          model: "dall-e-2",
+          model: "gpt-image-1",
           image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
-          mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
           prompt: prompt,
           n: 1,
-          size: "256x256",
-          response_format: "b64_json"
+          size: "1024x1024"
         });
 
         const b64 = response.data[0].b64_json;
