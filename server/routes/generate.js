@@ -35,6 +35,7 @@ router.post("/", rateLimiter, upload.single("image"), async (req, res) => {
 
     portraitCache.set(result.sessionId, {
       portraitPath: tempFilePath,
+      preparedPath: result.preparedPath,
       timestamp: Date.now()
     });
 
@@ -63,18 +64,17 @@ router.post("/full", async (req, res) => {
       return res.status(400).json({ error: "Session expired. Please upload again." });
     }
 
-    const { portraitPath } = portraitCache.get(sessionId);
+    const { portraitPath, preparedPath } = portraitCache.get(sessionId);
 
-    console.log(`⏳ Generating comparison card for session ${sessionId}...`);
+    console.log(`⏳ Generating comparison card for session ${sessionId} (reusing prepared image)...`);
 
-    const result = await generateFull(portraitPath, sessionId);
+    const result = await generateFull(preparedPath, sessionId);
 
     console.log(`✅ Comparison card generated`);
     console.log(`🧹 Cleaning up portrait cache...`);
 
-    if (fs.existsSync(portraitPath)) {
-      fs.unlinkSync(portraitPath);
-    }
+    if (portraitPath && fs.existsSync(portraitPath)) fs.unlinkSync(portraitPath);
+    if (preparedPath && preparedPath !== portraitPath && fs.existsSync(preparedPath)) fs.unlinkSync(preparedPath);
     portraitCache.delete(sessionId);
 
     res.json(result);
@@ -90,9 +90,8 @@ setInterval(() => {
   const now = Date.now();
   for (const [sessionId, data] of portraitCache.entries()) {
     if (now - data.timestamp > 3600000) {
-      if (fs.existsSync(data.portraitPath)) {
-        fs.unlinkSync(data.portraitPath);
-      }
+      if (data.portraitPath && fs.existsSync(data.portraitPath)) fs.unlinkSync(data.portraitPath);
+      if (data.preparedPath && data.preparedPath !== data.portraitPath && fs.existsSync(data.preparedPath)) fs.unlinkSync(data.preparedPath);
       portraitCache.delete(sessionId);
       console.log(`🧹 Cleaned up expired session: ${sessionId}`);
     }

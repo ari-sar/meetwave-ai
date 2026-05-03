@@ -123,8 +123,7 @@ const FREE_TIER_STYLE = "Niche/Indie";
 
 const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Chanel-inspired, Soft Feminine, Baddie, Niche/Indie, Vintage, Preppy/Academia, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a left-right or side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short labels (e.g.: Recommended, Average, Avoid), with no lengthy body text. High resolution, information clearly presented, suitable for sharing on social media.`;
 
-async function runImageEdit(imagePath, prompt, sessionId, filename) {
-  const preparedPath = await prepareImageForEdit(imagePath);
+async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   const preparedBuffer = fs.readFileSync(preparedPath);
 
   const response = await openai.images.edit({
@@ -153,16 +152,18 @@ async function generatePreview(imagePath) {
 
     const analysis = await analyzePortrait(imagePath);
     const sessionId = uuidv4();
+    const preparedPath = await prepareImageForEdit(imagePath);
 
     const description = STYLE_DESCRIPTIONS[FREE_TIER_STYLE];
     const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
 
     console.log(`🎨 Generating preview in fixed style: ${FREE_TIER_STYLE}`);
-    const { url: previewUrl } = await runImageEdit(imagePath, prompt, sessionId, "preview.png");
+    const { url: previewUrl } = await runImageEdit(preparedPath, prompt, sessionId, "preview.png");
 
     console.log("✅ Free preview generated");
     return {
       sessionId,
+      preparedPath,
       previewStyle: FREE_TIER_STYLE,
       previewUrl,
       allStyles: ALL_STYLES,
@@ -176,10 +177,10 @@ async function generatePreview(imagePath) {
   }
 }
 
-async function generateFull(imagePath, sessionId) {
+async function generateFull(preparedPath, sessionId) {
   try {
     console.log("🎨 Generating paid comparison card (single image, all 12 styles)...");
-    const { url: comparisonUrl } = await runImageEdit(imagePath, COMPARISON_PROMPT, sessionId, "comparison.png");
+    const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
     console.log("✅ Comparison card generated");
     return { comparisonUrl };
   } catch (error) {
