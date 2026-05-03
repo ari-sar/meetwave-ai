@@ -86,7 +86,8 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
 
     const analysisText = response.choices[0].message.content;
     console.log("Raw response from GPT-4o:", analysisText);
-    const analysis = JSON.parse(analysisText);
+    const cleanedText = analysisText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+    const analysis = JSON.parse(cleanedText);
 
     console.log("✅ Analysis complete");
     return analysis;
