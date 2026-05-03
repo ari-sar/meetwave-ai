@@ -158,7 +158,7 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
 
         return {
           style: styleName,
-          url: `/generated/${sessionId}/${filename}`,
+          url: `http://localhost:5000/generated/${sessionId}/${filename}`,
           imagePath: filepath
         };
       } catch (error) {
