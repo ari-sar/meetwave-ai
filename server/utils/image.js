@@ -39,7 +39,7 @@ const STYLE_DESCRIPTIONS = {
 
 async function analyzePortrait(imagePath) {
   try {
-    console.log("🔍 Analyzing portrait with GPT-4o vision...");
+    console.log("🔍 Analyzing portrait with GPT-4-turbo vision...");
 
     const imageData = fs.readFileSync(imagePath);
     const base64Image = imageData.toString("base64");
@@ -92,6 +92,7 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
     return analysis;
   } catch (error) {
     console.error("❌ Portrait analysis failed:", error.message);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     throw error;
   }
 }
