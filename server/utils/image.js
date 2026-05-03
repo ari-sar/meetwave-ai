@@ -111,8 +111,8 @@ async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
         const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
 
         const response = await openai.images.edit({
-          model: "gpt-image-1",
-          image: imageData,
+          model: "dall-e-2",
+          image: fs.createReadStream(imagePath),
           prompt: prompt,
           n: 1,
           size: "1024x1024",
