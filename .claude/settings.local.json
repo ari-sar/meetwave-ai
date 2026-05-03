@@ -3,7 +3,9 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"e:\\\\production\\\\meetwave-ai\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(grep -E \"\\\\.\\(md|json|yml|yaml|env|gitignore\\)$\")"
+      "Bash(grep -E \"\\\\.\\(md|json|yml|yaml|env|gitignore\\)$\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }
