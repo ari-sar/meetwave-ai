@@ -45,7 +45,7 @@ async function analyzePortrait(imagePath) {
     const base64Image = imageData.toString("base64");
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo",
       messages: [
         {
           role: "user",
@@ -85,6 +85,7 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
     });
 
     const analysisText = response.choices[0].message.content;
+    console.log("Raw response from GPT-4-turbo:", analysisText);
     const analysis = JSON.parse(analysisText);
 
     console.log("✅ Analysis complete");
