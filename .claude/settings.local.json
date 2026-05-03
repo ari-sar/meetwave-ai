@@ -1,4 +1,19 @@
 {
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NonInteractive -File \"e:\\production\\meetwave-ai\\.claude\\auto-push.ps1\"",
+            "shell": "powershell",
+            "timeout": 30,
+            "statusMessage": "Auto-pushing to GitHub..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"e:\\\\production\\\\meetwave-ai\" -Force)",
