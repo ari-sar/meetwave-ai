@@ -119,97 +119,54 @@ async function prepareImageForEdit(imagePath) {
   return outPath;
 }
 
-async function generateImagesForStyles(imagePath, stylesToGenerate, sessionId) {
-  try {
-    console.log(`🎨 Generating images for ${stylesToGenerate.length} styles with gpt-image-1...`);
+const FREE_TIER_STYLE = "Niche/Indie";
 
-    const preparedPath = await prepareImageForEdit(imagePath);
-    const preparedBuffer = fs.readFileSync(preparedPath);
+const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Chanel-inspired, Soft Feminine, Baddie, Niche/Indie, Vintage, Preppy/Academia, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a left-right or side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short labels (e.g.: Recommended, Average, Avoid), with no lengthy body text. High resolution, information clearly presented, suitable for sharing on social media.`;
 
-    const generationPromises = stylesToGenerate.map(async (styleName) => {
-      try {
-        const description = STYLE_DESCRIPTIONS[styleName];
-        const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
+async function runImageEdit(imagePath, prompt, sessionId, filename) {
+  const preparedPath = await prepareImageForEdit(imagePath);
+  const preparedBuffer = fs.readFileSync(preparedPath);
 
-        const response = await openai.images.edit({
-          model: "gpt-image-1",
-          image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
-          prompt: prompt,
-          n: 1,
-          size: "1024x1536"
-        });
+  const response = await openai.images.edit({
+    model: "gpt-image-1",
+    image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
+    prompt,
+    n: 1,
+    size: "1024x1536"
+  });
 
-        const b64 = response.data[0].b64_json;
-        const filename = `${styleName.toLowerCase().replace(/\//g, "-")}.png`;
-        const filepath = path.join("uploads", "generated", sessionId, filename);
+  const b64 = response.data[0].b64_json;
+  const filepath = path.join("uploads", "generated", sessionId, filename);
+  const dir = path.dirname(filepath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
 
-        // Ensure directory exists
-        const dir = path.dirname(filepath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-
-        // Save base64 as PNG
-        fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
-
-        return {
-          style: styleName,
-          url: `http://localhost:5000/generated/${sessionId}/${filename}`,
-          imagePath: filepath
-        };
-      } catch (error) {
-        console.error(`❌ Generation failed for ${styleName}:`, error.message);
-        return null;
-      }
-    });
-
-    const results = await Promise.allSettled(generationPromises);
-    const validResults = results
-      .map(r => r.status === "fulfilled" ? r.value : null)
-      .filter(r => r !== null);
-
-    if (validResults.length === 0) {
-      throw new Error("All image generations failed");
-    }
-
-    console.log(`✅ Generated ${validResults.length}/${stylesToGenerate.length} images`);
-    return validResults;
-  } catch (error) {
-    console.error("❌ Image generation error:", error.message);
-    throw error;
-  }
+  return {
+    url: `http://localhost:5000/generated/${sessionId}/${filename}`,
+    imagePath: filepath
+  };
 }
 
 async function generatePreview(imagePath) {
   try {
-    console.log("📸 Starting free preview generation (3 images)...");
+    console.log("📸 Starting free preview generation (1 fixed-style image)...");
 
-    // Step 1: Analyze portrait
     const analysis = await analyzePortrait(imagePath);
-
-    // Step 2: Pick 1 recommended, 1 average, 1 avoid
-    const ratings = analysis.ratings;
-    const recommended = Object.keys(ratings).find(s => ratings[s] === "recommended");
-    const average = Object.keys(ratings).find(s => ratings[s] === "average");
-    const avoid = Object.keys(ratings).find(s => ratings[s] === "avoid");
-
-    const stylesToGenerate = [recommended, average, avoid].filter(Boolean);
-
-    // Step 3: Generate session directory
     const sessionId = uuidv4();
-    const generatedImages = await generateImagesForStyles(imagePath, stylesToGenerate, sessionId);
 
-    // Step 4: Add ratings to each image
-    const previewsWithRatings = generatedImages.map(img => ({
-      ...img,
-      rating: ratings[img.style]
-    }));
+    const description = STYLE_DESCRIPTIONS[FREE_TIER_STYLE];
+    const prompt = `Transform this person wearing ${description}. Keep the face and facial features identical. Realistic fashion photography, studio lighting, professional quality, upper body visible.`;
 
+    console.log(`🎨 Generating preview in fixed style: ${FREE_TIER_STYLE}`);
+    const { url: previewUrl } = await runImageEdit(imagePath, prompt, sessionId, "preview.png");
+
+    console.log("✅ Free preview generated");
     return {
       sessionId,
-      previews: previewsWithRatings,
+      previewStyle: FREE_TIER_STYLE,
+      previewUrl,
       allStyles: ALL_STYLES,
-      ratings,
+      ratings: analysis.ratings,
       bestMatch: analysis.bestMatch,
       tips: analysis.tips
     };
@@ -219,28 +176,12 @@ async function generatePreview(imagePath) {
   }
 }
 
-async function generateFull(imagePath, sessionId, ratings) {
+async function generateFull(imagePath, sessionId) {
   try {
-    console.log("🎨 Generating remaining 9 images for paid tier...");
-
-    const previewedStyles = new Set();
-    const generatedDir = path.join("uploads", "generated", sessionId);
-
-    if (fs.existsSync(generatedDir)) {
-      fs.readdirSync(generatedDir).forEach(file => {
-        const styleName = file.replace(".png", "").replace(/-/g, "/");
-        previewedStyles.add(styleName);
-      });
-    }
-
-    const remainingStyles = ALL_STYLES.filter(s => !previewedStyles.has(s));
-
-    const fullImages = await generateImagesForStyles(imagePath, remainingStyles, sessionId);
-
-    return fullImages.map(img => ({
-      ...img,
-      rating: ratings[img.style]
-    }));
+    console.log("🎨 Generating paid comparison card (single image, all 12 styles)...");
+    const { url: comparisonUrl } = await runImageEdit(imagePath, COMPARISON_PROMPT, sessionId, "comparison.png");
+    console.log("✅ Comparison card generated");
+    return { comparisonUrl };
   } catch (error) {
     console.error("❌ Full generation failed:", error.message);
     throw error;

@@ -24,33 +24,21 @@ router.post("/", rateLimiter, upload.single("image"), async (req, res) => {
     }
 
     console.log(`✅ File received: ${req.file.originalname}`);
-    console.log(`⏳ Analyzing portrait and generating 3 preview images...`);
+    console.log(`⏳ Analyzing portrait and generating fixed-style preview...`);
 
-    // Generate preview (3 images)
     const result = await generatePreview(tempFilePath);
 
-    console.log(`✅ Generated ${result.previews.length} preview images`);
-    console.log(`⏳ Updating user rate limit session...`);
+    console.log(`✅ Generated free preview (${result.previewStyle})`);
 
     req.sessionData.freeCount += 1;
     await req.sessionData.save();
 
-    // Cache the portrait for paid generation later
     portraitCache.set(result.sessionId, {
       portraitPath: tempFilePath,
-      ratings: result.ratings,
       timestamp: Date.now()
     });
 
-    console.log(`✅ Request complete. Sending previews + metadata to frontend.`);
-    res.json({
-      sessionId: result.sessionId,
-      previews: result.previews,
-      allStyles: result.allStyles,
-      ratings: result.ratings,
-      bestMatch: result.bestMatch,
-      tips: result.tips
-    });
+    res.json(result);
 
   } catch (err) {
     console.error("❌ Generation Route Error:", err.message);
@@ -75,24 +63,21 @@ router.post("/full", async (req, res) => {
       return res.status(400).json({ error: "Session expired. Please upload again." });
     }
 
-    const cachedData = portraitCache.get(sessionId);
-    const portraitPath = cachedData.portraitPath;
-    const ratings = cachedData.ratings;
+    const { portraitPath } = portraitCache.get(sessionId);
 
-    console.log(`⏳ Generating remaining 9 images for session ${sessionId}...`);
+    console.log(`⏳ Generating comparison card for session ${sessionId}...`);
 
-    const fullImages = await generateFull(portraitPath, sessionId, ratings);
+    const result = await generateFull(portraitPath, sessionId);
 
-    console.log(`✅ Generated ${fullImages.length} additional images`);
+    console.log(`✅ Comparison card generated`);
     console.log(`🧹 Cleaning up portrait cache...`);
 
-    // Clean up portrait and cache after full generation
     if (fs.existsSync(portraitPath)) {
       fs.unlinkSync(portraitPath);
     }
     portraitCache.delete(sessionId);
 
-    res.json({ previews: fullImages });
+    res.json(result);
 
   } catch (err) {
     console.error("❌ Full Generation Error:", err.message);

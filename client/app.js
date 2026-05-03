@@ -26,79 +26,48 @@ function getFingerprint() {
   );
 }
 
-// Render a 12-card grid (3 visible, 9 blurred)
-function renderGrid(data, showPaid = false) {
+// Free render: 12-card grid; only previewStyle card is real, others blurred
+function renderGrid(data) {
   const container = document.getElementById("resultsGrid");
   container.innerHTML = "";
-
-  // Build array of all 12 styles with their data
-  const allCards = data.allStyles.map(style => {
-    const preview = data.previews.find(p => p.style === style);
-    return {
-      style,
-      rating: data.ratings[style],
-      url: preview?.url || null,
-      isPreview: !!preview
-    };
-  });
-
-  // Find indices: 1 recommended, 1 average, 1 avoid from the free previews
-  const freeStyleNames = data.previews.map(p => p.style);
-  const freeIndices = new Set(allCards.map((card, idx) => freeStyleNames.includes(card.style) ? idx : -1).filter(i => i !== -1));
-
-  // 4-column grid (4 × 3 = 12)
   container.className = "grid grid-cols-4 gap-3 w-full";
 
-  allCards.forEach((card, index) => {
-    const isFree = freeIndices.has(index) || (showPaid && card.isPreview);
-    const isLoaded = card.url !== null;
+  data.allStyles.forEach(style => {
+    const isPreview = style === data.previewStyle;
+    const rating = (data.ratings && data.ratings[style]) || "average";
 
-    // Determine rating icon
     let ratingBg, ratingText, ratingIcon;
-    if (card.rating === "recommended") {
-      ratingBg = "bg-[#C8E6C9]";
-      ratingText = "text-[#398E4B]";
-      ratingIcon = "✓";
-    } else if (card.rating === "average") {
-      ratingBg = "bg-[#FFE082]";
-      ratingText = "text-[#BF741F]";
-      ratingIcon = "–";
+    if (rating === "recommended") {
+      ratingBg = "bg-[#C8E6C9]"; ratingText = "text-[#398E4B]"; ratingIcon = "✓";
+    } else if (rating === "average") {
+      ratingBg = "bg-[#FFE082]"; ratingText = "text-[#BF741F]"; ratingIcon = "–";
     } else {
-      ratingBg = "bg-[#FFCDD2]";
-      ratingText = "text-[#C62828]";
-      ratingIcon = "✕";
+      ratingBg = "bg-[#FFCDD2]"; ratingText = "text-[#C62828]"; ratingIcon = "✕";
     }
 
     const cardElement = document.createElement("div");
-    cardElement.className = `relative rounded-lg overflow-hidden glass shadow-lg aspect-[3/4] flex flex-col transition-all duration-300 ${
-      isFree ? "" : "blur-md"
-    }`;
-
-    if (isFree && isLoaded) {
-      cardElement.classList.remove("blur-md");
-    }
+    cardElement.className = `relative rounded-lg overflow-hidden glass shadow-lg aspect-[3/4] flex flex-col transition-all duration-300 ${isPreview ? "" : "blur-md"}`;
 
     cardElement.innerHTML = `
-      <!-- Top Style Label -->
-      <div class="w-full text-center py-1.5 text-xs font-bold uppercase tracking-wider bg-[#424242] text-white">
-        ${card.style}
-      </div>
-
-      <!-- Image Area -->
+      <div class="w-full text-center py-1.5 text-xs font-bold uppercase tracking-wider bg-[#424242] text-white">${style}</div>
       <div class="flex-grow w-full relative overflow-hidden bg-gray-300">
-        ${isLoaded && isFree ? `<img src="${card.url}" class="w-full h-full object-cover" alt="${card.style}">` : `<div class="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500"></div>`}
-        ${!isFree ? `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40"><svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M5 9a2 2 0 114 0 2 2 0 01-4 0z"/><path fill-rule="evenodd" d="M0 10a10 10 0 1120 0 10 10 0 01-20 0zm10-8a2 2 0 100 4 2 2 0 000-4zm0 10a4 4 0 100-8 4 4 0 000 8z"/></svg></div>` : ""}
+        ${isPreview ? `<img src="${data.previewUrl}" class="w-full h-full object-cover" alt="${style}">` : `<div class="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500"></div>`}
+        ${!isPreview ? `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40"><svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M5 9a2 2 0 114 0 2 2 0 01-4 0z"/><path fill-rule="evenodd" d="M0 10a10 10 0 1120 0 10 10 0 01-20 0zm10-8a2 2 0 100 4 2 2 0 000-4zm0 10a4 4 0 100-8 4 4 0 000 8z"/></svg></div>` : ""}
       </div>
-
-      <!-- Bottom Rating Bar -->
       <div class="w-full flex items-center justify-center gap-1 py-1.5 text-xs font-bold ${ratingBg}">
-        <span>${ratingIcon}</span>
-        <span class="${ratingText}">${card.rating.toUpperCase()}</span>
+        <span>${ratingIcon}</span><span class="${ratingText}">${rating.toUpperCase()}</span>
       </div>
     `;
-
     container.appendChild(cardElement);
   });
+}
+
+// Paid render: replace grid with single comparison image
+function renderComparison(comparisonUrl) {
+  const container = document.getElementById("resultsGrid");
+  container.innerHTML = "";
+  container.className = "w-full flex justify-center";
+  container.innerHTML = `<img src="${comparisonUrl}" class="w-full max-w-3xl rounded-xl shadow-2xl" alt="Outfit comparison card">`;
 }
 
 // Render best match + tips section
@@ -197,17 +166,14 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
 
     clearInterval(progressInterval);
 
-    // Store session data for paid generation
     currentSessionId = data.sessionId;
     currentRatings = data.ratings;
 
-    // Show results
     document.getElementById("loadingState").classList.add("hidden");
     document.getElementById("resultsSection").classList.remove("hidden");
     document.getElementById("resultsSection").classList.add("flex");
 
-    // Render grid and metadata
-    renderGrid(data, false);
+    renderGrid(data);
     renderMetadata(data);
 
     // Show unlock section
@@ -243,19 +209,7 @@ document.getElementById('unlockBtn')?.addEventListener('click', async function()
       throw new Error(data.error || "Generation failed");
     }
 
-    // Update grid with new images
-    const container = document.getElementById("resultsGrid");
-    const fullData = {
-      allStyles: JSON.parse(localStorage.getItem("allStyles") || "[]"),
-      previews: JSON.parse(localStorage.getItem("previews") || "[]"),
-      ratings: currentRatings
-    };
-
-    // Merge paid images into previews
-    fullData.previews.push(...data.previews);
-
-    // Re-render grid
-    renderGrid(fullData, true);
+    renderComparison(data.comparisonUrl);
 
     this.textContent = "All styles unlocked!";
     this.disabled = true;
