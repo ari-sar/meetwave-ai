@@ -7,7 +7,9 @@ const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 60000,
+  maxRetries: 2
 });
 
 const ALL_STYLES = [
@@ -44,8 +46,11 @@ async function analyzePortrait(imagePath) {
   try {
     console.log("🔍 Analyzing portrait with GPT-4o vision...");
 
-    const imageData = fs.readFileSync(imagePath);
-    const base64Image = imageData.toString("base64");
+    const downscaled = await sharp(imagePath)
+      .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+    const base64Image = downscaled.toString("base64");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
