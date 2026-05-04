@@ -37,7 +37,18 @@ function unlockComparison() {
   const img = document.getElementById("comparisonImg");
   const overlay = document.getElementById("lockOverlay");
   if (img) img.classList.add("unlocked");
-  if (overlay) overlay.remove();
+  if (overlay) {
+    const chip = overlay.querySelector(".lock-chip");
+    if (chip) chip.textContent = "✓ Unlocked";
+    setTimeout(() => overlay.remove(), 1200);
+  }
+
+  const pill = document.querySelector(".unlock-headline .lock-pill");
+  if (pill) pill.textContent = "✓ Unlocked";
+  const headline = document.querySelector(".unlock-headline h3");
+  if (headline) headline.textContent = "Your report is ready";
+  const headlineSub = document.querySelector(".unlock-headline .muted");
+  if (headlineSub) headlineSub.classList.add("hidden");
 }
 
 function renderMetadata(data) {
