@@ -108,26 +108,30 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
 }
 
 async function prepareImageForEdit(imagePath) {
-  const meta = await sharp(imagePath).metadata();
-  const stats = fs.statSync(imagePath);
-  const isPng = meta.format === "png";
-  const isSquare = meta.width === meta.height;
-  const underLimit = stats.size < 4 * 1024 * 1024;
-
-  if (isPng && underLimit) return imagePath;
-
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
   await sharp(imagePath)
     .resize(1024, 1536, { fit: "cover", position: "centre" })
+    .normalise()
+    .modulate({ brightness: 1.1 })
+    .ensureAlpha()
     .png({ compressionLevel: 9 })
     .toFile(outPath);
-  console.log(`🖼️  Converted upload to square PNG: ${outPath}`);
+  console.log(`🖼️  Normalized + converted upload to PNG: ${outPath}`);
   return outPath;
 }
 
 const FREE_TIER_STYLE = "Niche/Indie";
 
-const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Premium Clothing, Indian Style, Baddie, Niche/Indie, Vintage, Gen-Z Style Clothing, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short style-name labels, with no lengthy body text and no rating words like "Recommended", "Average", or "Avoid". High resolution, information clearly presented, suitable for sharing on social media.`;
+const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Premium Clothing, Indian Style, Baddie, Niche/Indie, Vintage, Gen-Z Style Clothing, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short style-name labels, with no lengthy body text and no rating words like "Recommended", "Average", or "Avoid".
+
+CRITICAL LIGHTING & COLOR REQUIREMENTS — these must NOT vary based on the input photo:
+- Render every panel as bright, evenly-lit studio photography on a clean off-white seamless background.
+- Use daylight-balanced color temperature (~5500K), high-key lighting, soft natural shadows.
+- All 12 panels must share identical brightness, contrast, saturation, and color grade.
+- Do NOT inherit, match, or carry over the lighting, color cast, ambient tone, or background of the input photo. Treat the input only as a reference for the subject's face and identity.
+- Outfits should look freshly photographed in a controlled, well-lit fashion studio — never dim, warm-cast, low-key, or environmental.
+
+High resolution, information clearly presented, suitable for sharing on social media.`;
 
 async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   const preparedBuffer = fs.readFileSync(preparedPath);
