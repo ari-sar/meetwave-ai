@@ -85,11 +85,7 @@ function renderMetadata(data) {
         <div class="glass p-6 rounded-xl">
           <h4 class="text-lg font-bold mb-4 text-purple-400">Your Palette</h4>
           <div class="flex gap-2">
-            <div class="w-8 h-8 rounded-full" style="background-color: #E8DFD0;"></div>
-            <div class="w-8 h-8 rounded-full" style="background-color: #A0896A;"></div>
-            <div class="w-8 h-8 rounded-full" style="background-color: #5C5A5A;"></div>
-            <div class="w-8 h-8 rounded-full" style="background-color: #8C8C8C;"></div>
-            <div class="w-8 h-8 rounded-full" style="background-color: #EFEFEF;"></div>
+            ${(data.palette || []).map(c => `<div class="w-8 h-8 rounded-full" style="background-color: ${c};"></div>`).join("")}
           </div>
         </div>
       </div>

@@ -82,10 +82,11 @@ Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
     "Keep hair volume natural and slightly tousled",
     "Earth tones & neutrals suit you best",
     "Well-groomed appearance enhances overall look"
-  ]
+  ],
+  "palette": ["#E8DFD0", "#A0896A", "#5C5A5A", "#8C8C8C", "#EFEFEF"]
 }
 
-Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 styles. Tips should be 3 specific grooming/style tips.`
+Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 styles. Tips should be 3 specific grooming/style tips tailored to this person. Palette should be 5 hex color codes that flatter this person's complexion and suit their best-match styles.`
             }
           ]
         }
@@ -169,7 +170,8 @@ async function generatePreview(imagePath) {
       allStyles: ALL_STYLES,
       ratings: analysis.ratings,
       bestMatch: analysis.bestMatch,
-      tips: analysis.tips
+      tips: analysis.tips,
+      palette: analysis.palette
     };
   } catch (error) {
     console.error("❌ Preview generation failed:", error.message);
