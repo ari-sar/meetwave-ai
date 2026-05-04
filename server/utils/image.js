@@ -127,16 +127,7 @@ async function prepareImageForEdit(imagePath) {
 
 const FREE_TIER_STYLE = "Niche/Indie";
 
-function buildComparisonPrompt(analysis) {
-  const bestMatches = (analysis.bestMatch || []).join(", ");
-  const palette = (analysis.palette || []).join(", ");
-  return `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Chanel-inspired, Soft Feminine, Baddie, Niche/Indie, Vintage, Preppy/Academia, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short labels (e.g.: Recommended, Average, Avoid), with no lengthy body text.
-
-Include a "Best Matches" section in the card listing these 5 styles in order: ${bestMatches}.
-Include a "Your Palette" section in the card showing exactly these 5 hex colors as round color swatches: ${palette}.
-
-High resolution, information clearly presented, suitable for sharing on social media.`;
-}
+const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Chanel-inspired, Soft Feminine, Baddie, Niche/Indie, Vintage, Preppy/Academia, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short labels (e.g.: Recommended, Average, Avoid), with no lengthy body text. High resolution, information clearly presented, suitable for sharing on social media.`;
 
 async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   const preparedBuffer = fs.readFileSync(preparedPath);
@@ -170,8 +161,7 @@ async function generatePreview(imagePath) {
     const preparedPath = await prepareImageForEdit(imagePath);
 
     console.log(`🎨 Generating comparison card with all 12 styles...`);
-    const prompt = buildComparisonPrompt(analysis);
-    const { url: comparisonUrl } = await runImageEdit(preparedPath, prompt, sessionId, "comparison.png");
+    const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
 
     console.log("✅ Comparison card generated");
     return {

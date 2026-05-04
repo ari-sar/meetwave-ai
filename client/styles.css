@@ -135,18 +135,53 @@ html, body {
   border: 1px solid var(--border);
 }
 
-/* Loading */
-.loading { padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+/* Loading — skeleton */
+.loading { margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .loading.hidden { display: none !important; }
-.loading h3 { font-weight: 600; }
-.spinner {
-  width: 44px; height: 44px;
-  border: 3px solid var(--border);
-  border-top-color: var(--ink);
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
+.skeleton-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+.skeleton-grid {
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 10px;
+}
+.skeleton-cell {
+  background: linear-gradient(135deg, #ECEAE3 0%, #F6F4EE 100%);
+  border-radius: 10px;
+}
+.skeleton-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.7) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.skeleton-caption {
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
 
 /* Results */
 .results { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 8px; }

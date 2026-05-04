@@ -44,10 +44,22 @@ function renderMetadata(data) {
   const section = document.getElementById("bestMatchSection");
   section.innerHTML = `
     <div class="info-card">
+      <h4>Your best matches</h4>
+      <ol>
+        ${(data.bestMatch || []).map((s, i) => `<li><span class="num">${i + 1}.</span> ${s}</li>`).join("")}
+      </ol>
+    </div>
+    <div class="info-card">
       <h4>Quick tips</h4>
       <ul>
         ${(data.tips || []).map(t => `<li>• ${t}</li>`).join("")}
       </ul>
+    </div>
+    <div class="info-card">
+      <h4>Your palette</h4>
+      <div class="palette-row">
+        ${(data.palette || []).map(c => `<div style="background-color:${c}"></div>`).join("")}
+      </div>
     </div>
   `;
 }
