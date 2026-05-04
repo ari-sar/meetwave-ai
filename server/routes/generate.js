@@ -23,7 +23,18 @@ router.post("/", rateLimiter, upload.single("image"), async (req, res) => {
     const result = await generatePreview(tempFilePath);
 
     req.sessionData.freeCount += 1;
-    await req.sessionData.save();
+    if (typeof req.sessionData.save === "function") {
+      req.sessionData.lastSessionId = result.sessionId;
+      await req.sessionData.save();
+    }
+
+    // Always persist sessionId so /api/payment/confirm + /api/verify can resolve it (dev mode bypasses rate limiter).
+    const Session = require("../models/Session");
+    await Session.findOneAndUpdate(
+      { lastSessionId: result.sessionId },
+      { lastSessionId: result.sessionId },
+      { upsert: true }
+    );
 
     if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
 

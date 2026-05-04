@@ -3,76 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MeetWave AI | Outfit Analysis</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .glass {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-  </style>
+  <title>MeetWave AI — Find Your Aesthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-950 text-white min-h-screen font-sans selection:bg-purple-500 selection:text-white">
+<body>
 
-  <nav class="w-full p-6 flex justify-center border-b border-white/10">
-    <h1 class="text-2xl font-bold tracking-tighter bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
-      MeetWave AI
-    </h1>
+  <nav class="topbar">
+    <span class="logo">MeetWave</span>
+    <span class="logo-tag">AI</span>
   </nav>
 
-  <main class="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center">
-    
-    <div class="text-center mb-10">
-      <h2 class="text-4xl font-extrabold mb-4">Discover Your Perfect Aesthetic</h2>
-      <p class="text-gray-400 max-w-lg mx-auto">Upload a portrait to instantly visualize yourself in premium, AI-generated styles tailored to your look.</p>
-    </div>
+  <main class="page">
+
+    <!-- Sample Slider (≤10vh) -->
+    <section id="sampleSlider" class="slider" aria-label="Sample style cards">
+      <div class="slider-track">
+        <img src="http://localhost:5000/generated/28b11139-2d66-4d20-95ca-5607a3c754f7/comparison.png" alt="Sample 1" loading="lazy">
+        <img src="http://localhost:5000/generated/48300c0c-eb19-48ed-bec8-3418358cf89a/comparison.png" alt="Sample 2" loading="lazy">
+        <img src="http://localhost:5000/generated/f2566c6c-89e4-499d-b5bd-47e35455b5b0/comparison.png" alt="Sample 3" loading="lazy">
+        <img src="http://localhost:5000/generated/28b11139-2d66-4d20-95ca-5607a3c754f7/comparison.png" alt="Sample 4" loading="lazy">
+        <img src="http://localhost:5000/generated/48300c0c-eb19-48ed-bec8-3418358cf89a/comparison.png" alt="Sample 5" loading="lazy">
+      </div>
+    </section>
+
+    <!-- Hero -->
+    <header class="hero">
+      <h1>See yourself in <em>12 styles</em>.</h1>
+      <p>Drop a selfie. Get a premium style report in seconds.</p>
+    </header>
 
     <!-- Upload Section -->
-    <div id="uploadSection" class="w-full max-w-md glass rounded-2xl p-8 flex flex-col items-center justify-center border-dashed border-2 border-gray-600 hover:border-purple-500 transition-colors">
-      <input type="file" id="fileInput" accept="image/*" class="hidden" />
-      <label for="fileInput" class="cursor-pointer flex flex-col items-center text-gray-400 hover:text-white transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-        </svg>
-        <span class="font-medium text-lg">Click to Upload Portrait</span>
-        <span class="text-sm mt-1">JPEG, PNG up to 5MB</span>
+    <section id="uploadSection" class="upload-card">
+      <input type="file" id="fileInput" accept="image/*" hidden />
+      <label for="fileInput" class="upload-drop">
+        <span class="upload-emoji">↑</span>
+        <span class="upload-title">Upload your photo</span>
+        <span class="upload-sub">JPEG or PNG · up to 5MB</span>
       </label>
-      
-      <!-- Removed onclick, added type="button" -->
-      <button type="button" id="uploadBtn" class="mt-6 w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all hidden">
-        Generate Styles
-      </button>
-    </div>
+      <button type="button" id="uploadBtn" class="btn btn-primary hidden">Generate my styles</button>
+    </section>
 
-    <!-- Loading State -->
-    <div id="loadingState" class="hidden flex-col items-center mt-12 w-full max-w-2xl text-center py-10">
-      <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-      <h3 id="loadingText" class="text-xl font-semibold animate-pulse text-purple-400">Uploading your portrait...</h3>
-      <p class="text-gray-500 mt-2">Check the browser console for live logs.</p>
-    </div>
+    <!-- Loading -->
+    <section id="loadingState" class="loading hidden">
+      <div class="spinner"></div>
+      <h3 id="loadingText">Analyzing your features…</h3>
+      <p class="muted">This usually takes ~15 seconds.</p>
+    </section>
 
-    <!-- Results Section -->
-    <div id="resultsSection" class="hidden w-full mt-12 flex flex-col items-center">
-      <h3 class="text-2xl font-bold mb-2">Your Outfit Analysis</h3>
-      <p class="text-gray-400 mb-8 text-sm">Based on your unique features</p>
-      <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full"></div>
+    <!-- Results -->
+    <section id="resultsSection" class="results hidden">
+      <h2 class="results-title">Your style report is ready</h2>
+      <p class="muted">All 12 styles · pay to reveal</p>
+      <div id="resultsGrid"></div>
       <div id="bestMatchSection"></div>
-    </div>
+    </section>
 
-    <!-- Unlock Section -->
-    <div id="unlockSection" class="hidden mt-16 text-center w-full max-w-2xl glass p-10 rounded-3xl relative overflow-hidden">
-      <div class="absolute -top-24 -right-24 w-48 h-48 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-      
-      <h3 class="text-3xl font-bold relative z-10 mb-4">Unlock Your Full Style Report</h3>
-      <p class="text-gray-300 relative z-10 mb-8">Get 9 more premium styles including Korean, Old Money, and Cyberpunk in ultra-HD.</p>
-      
-      <button type="button" id="unlockBtn" class="relative z-10 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-400 hover:to-blue-500 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-purple-500/30 transition-transform transform hover:scale-105">
-        Unlock for ₹19
-      </button>
-    </div>
+    <!-- Unlock -->
+    <section id="unlockSection" class="unlock hidden">
+      <div class="unlock-headline">
+        <span class="lock-pill">🔒 Locked</span>
+        <h3>Pay ₹19 to unlock & download</h3>
+        <p class="muted">High-res PNG · all 12 styles · yours forever</p>
+      </div>
+      <div id="razorpayMount">
+        <!-- TODO(razorpay): paste Razorpay button snippet here -->
+        <button type="button" id="unlockBtn" class="btn btn-accent">Unlock for ₹19</button>
+      </div>
+      <a id="downloadBtn" class="btn btn-primary hidden" download="meetwave-styles.png">↓ Download your report</a>
+    </section>
 
   </main>
 
