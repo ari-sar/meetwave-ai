@@ -131,21 +131,27 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   }
 });
 
-// Unlock flow — wires into Razorpay success callback when integrated.
-async function handlePaymentSuccess() {
+const API_BASE = "http://localhost:5000";
+
+async function handlePaymentSuccess(razorpayResponse) {
   if (!currentSessionId) return alert("Session expired. Please upload again.");
   try {
-    const res = await fetch("http://localhost:5000/api/payment/confirm", {
+    const res = await fetch(`${API_BASE}/api/payment/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: currentSessionId })
+      body: JSON.stringify({
+        sessionId: currentSessionId,
+        razorpay_order_id: razorpayResponse.razorpay_order_id,
+        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+        razorpay_signature: razorpayResponse.razorpay_signature
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Confirmation failed");
 
     unlockComparison();
     const dl = document.getElementById("downloadBtn");
-    dl.href = `http://localhost:5000/api/verify/${data.downloadToken}`;
+    dl.href = `${API_BASE}/api/verify/${data.downloadToken}`;
     dl.classList.remove("hidden");
 
     const unlockBtn = document.getElementById("unlockBtn");
@@ -155,19 +161,32 @@ async function handlePaymentSuccess() {
   }
 }
 
-// Razorpay hosted Payment Button: success is signalled via postMessage from the checkout iframe.
-window.addEventListener("message", (event) => {
-  if (!event.origin.includes("razorpay.com")) return;
-  const data = event.data || {};
-  const payload = typeof data === "string" ? safeParse(data) : data;
-  const event_name = payload?.event || payload?.type;
-  const status = payload?.status || payload?.data?.status;
+async function startCheckout() {
+  if (!currentSessionId) return alert("Generate your styles first.");
+  try {
+    const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: currentSessionId })
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || "Order failed");
 
-  if (event_name === "payment.success" || status === "captured" || status === "success" || payload?.razorpay_payment_id) {
-    handlePaymentSuccess();
+    const rzp = new Razorpay({
+      key: order.keyId,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.orderId,
+      name: "MeetWave AI",
+      description: "Unlock full style report",
+      handler: handlePaymentSuccess,
+      theme: { color: "#FF5A1F" },
+      modal: { ondismiss: () => console.log("Checkout dismissed") }
+    });
+    rzp.open();
+  } catch (err) {
+    alert("Could not start checkout: " + err.message);
   }
-});
-
-function safeParse(s) {
-  try { return JSON.parse(s); } catch { return {}; }
 }
+
+document.getElementById('unlockBtn')?.addEventListener('click', startCheckout);

@@ -8,6 +8,7 @@ const sessionSchema = new mongoose.Schema({
   downloadToken: String,
   tokenIssuedAt: Date,
   lastSessionId: String,
+  razorpayOrderId: String,
   createdAt: { type: Date, default: Date.now }
 });
 

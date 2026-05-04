@@ -1,43 +1,122 @@
 const express = require("express");
-const router = express.Router();
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
 const Session = require("../models/Session");
 const { generateHash } = require("../utils/hash");
 
-router.post("/create-intent", async (req, res) => {
-  try {
-    // TODO(razorpay): create a real order via Razorpay Orders API
-    res.status(200).json({
-      orderId: "order_mock_" + Date.now(),
-      amount: 1900,
-      currency: "INR"
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Order creation failed" });
-  }
+const router = express.Router();
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-router.post("/confirm", async (req, res) => {
+const AMOUNT_PAISE = 1900;
+
+router.post("/create-order", async (req, res) => {
   try {
     const { sessionId } = req.body;
     if (!sessionId) return res.status(400).json({ error: "sessionId required" });
 
-    // TODO(razorpay): verify razorpay_signature with HMAC-SHA256(orderId|paymentId, key_secret)
-
-    const tokenInput = `${sessionId}:${Date.now()}:${process.env.JWT_SECRET || "dev-secret"}`;
-    const downloadToken = generateHash(tokenInput);
-    const tokenIssuedAt = new Date();
+    const order = await razorpay.orders.create({
+      amount: AMOUNT_PAISE,
+      currency: "INR",
+      notes: { sessionId }
+    });
 
     await Session.findOneAndUpdate(
       { lastSessionId: sessionId },
-      { lastSessionId: sessionId, paid: true, downloadToken, tokenIssuedAt },
-      { upsert: true, new: true }
+      { lastSessionId: sessionId, razorpayOrderId: order.id },
+      { upsert: true }
     );
 
-    res.json({ downloadToken });
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (error) {
+    console.error("Order creation failed:", error.message);
+    res.status(500).json({ error: "Order creation failed" });
+  }
+});
+
+// Client-side success handler from Checkout — verifies razorpay signature on (order_id|payment_id).
+router.post("/confirm", async (req, res) => {
+  try {
+    const { sessionId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!sessionId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: "Missing payment fields" });
+    }
+
+    const expected = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expected !== razorpay_signature) {
+      return res.status(400).json({ error: "Invalid signature" });
+    }
+
+    const session = await markSessionPaid(sessionId);
+    res.json({ downloadToken: session.downloadToken });
   } catch (error) {
     console.error("Payment confirm error:", error.message);
     res.status(500).json({ error: "Payment confirmation failed" });
   }
 });
 
+// Razorpay webhook — server-side source of truth. Mounted with raw body in server/index.js.
+async function webhookHandler(req, res) {
+  try {
+    const signature = req.headers["x-razorpay-signature"];
+    const rawBody = req.body; // Buffer (because of express.raw)
+    const expected = crypto
+      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
+      .update(rawBody)
+      .digest("hex");
+
+    if (signature !== expected) {
+      console.warn("⚠️ Webhook signature mismatch");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const payload = JSON.parse(rawBody.toString("utf8"));
+    const event = payload.event;
+
+    if (event === "payment.captured") {
+      const sessionId = payload?.payload?.payment?.entity?.notes?.sessionId;
+      if (!sessionId) {
+        console.warn("⚠️ Webhook missing notes.sessionId");
+        return res.status(200).send("ok");
+      }
+      await markSessionPaid(sessionId);
+      console.log(`✓ Webhook: session ${sessionId} marked paid`);
+    } else {
+      console.log(`Webhook event ignored: ${event}`);
+    }
+
+    res.status(200).send("ok");
+  } catch (error) {
+    console.error("Webhook error:", error.message);
+    res.status(500).send("error");
+  }
+}
+
+async function markSessionPaid(sessionId) {
+  const existing = await Session.findOne({ lastSessionId: sessionId });
+  if (existing && existing.paid && existing.downloadToken) return existing;
+
+  const downloadToken = generateHash(`${sessionId}:${Date.now()}:${process.env.JWT_SECRET || "dev-secret"}`);
+  const tokenIssuedAt = new Date();
+
+  return Session.findOneAndUpdate(
+    { lastSessionId: sessionId },
+    { lastSessionId: sessionId, paid: true, downloadToken, tokenIssuedAt },
+    { upsert: true, new: true }
+  );
+}
+
 module.exports = router;
+module.exports.webhookHandler = webhookHandler;
