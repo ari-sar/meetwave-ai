@@ -127,7 +127,7 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   const preparedBuffer = fs.readFileSync(preparedPath);
 
   const response = await openai.images.edit({
-    model: "gpt-image-1",
+    model: "gpt-image-1.5",
     image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
     prompt,
     n: 1,
