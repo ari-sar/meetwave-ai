@@ -155,5 +155,19 @@ async function handlePaymentSuccess() {
   }
 }
 
-// TODO(razorpay): replace this stub click with the Razorpay button success callback.
-document.getElementById('unlockBtn')?.addEventListener('click', handlePaymentSuccess);
+// Razorpay hosted Payment Button: success is signalled via postMessage from the checkout iframe.
+window.addEventListener("message", (event) => {
+  if (!event.origin.includes("razorpay.com")) return;
+  const data = event.data || {};
+  const payload = typeof data === "string" ? safeParse(data) : data;
+  const event_name = payload?.event || payload?.type;
+  const status = payload?.status || payload?.data?.status;
+
+  if (event_name === "payment.success" || status === "captured" || status === "success" || payload?.razorpay_payment_id) {
+    handlePaymentSuccess();
+  }
+});
+
+function safeParse(s) {
+  try { return JSON.parse(s); } catch { return {}; }
+}
