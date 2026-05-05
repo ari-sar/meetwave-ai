@@ -262,13 +262,57 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
 });
 
 let paymentPollTimerId = null;
+let paymentPollStartedAt = null;
+const PAYMENT_POLL_TIMEOUT_MS = 60 * 1000;
+
+function showPaymentFailure() {
+  const verifyMsg = document.getElementById("paymentVerifyMsg");
+  if (verifyMsg) verifyMsg.classList.add("hidden");
+
+  const form = document.getElementById("razorpayPaymentForm");
+  if (form) form.style.display = "none";
+
+  const mount = document.getElementById("razorpayMount");
+  if (mount) {
+    const failureBox = document.createElement("div");
+    failureBox.className = "payment-failure";
+    failureBox.style.cssText = "margin-top:16px;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);text-align:left;";
+    failureBox.innerHTML = `
+      <h4 style="margin:0 0 8px 0;color:var(--accent);">Payment verification failed</h4>
+      <p class="muted" style="margin:0 0 12px 0;font-size:0.9rem;">We couldn't confirm your payment within 60 seconds. If money was deducted, please contact support with the details below.</p>
+      <div style="font-family:monospace;font-size:0.8rem;background:var(--surface);padding:10px;border-radius:8px;margin-bottom:12px;word-break:break-all;">
+        <div><strong>Session ID:</strong> ${currentSessionId || "unknown"}</div>
+        <div><strong>Time:</strong> ${new Date().toISOString()}</div>
+      </div>
+      <button id="contactSupportBtn" class="btn btn-primary" style="width:100%;">Contact Support</button>
+    `;
+    mount.appendChild(failureBox);
+
+    document.getElementById("contactSupportBtn")?.addEventListener("click", () => {
+      const supportOverlay = document.getElementById("supportOverlay");
+      const messageInput = document.getElementById("messageInput");
+      if (messageInput) {
+        messageInput.value = `Payment issue — Session: ${currentSessionId}\nTime: ${new Date().toISOString()}\n\nDetails: `;
+      }
+      if (supportOverlay) supportOverlay.classList.remove("hidden");
+    });
+  }
+}
 
 function startPaymentPolling() {
   if (!currentSessionId || paymentPollTimerId) return;
 
   const verifyMsg = document.getElementById("paymentVerifyMsg");
+  paymentPollStartedAt = Date.now();
 
   const pollPayment = async () => {
+    if (Date.now() - paymentPollStartedAt > PAYMENT_POLL_TIMEOUT_MS) {
+      clearTimeout(paymentPollTimerId);
+      paymentPollTimerId = null;
+      showPaymentFailure();
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/payment/status/${currentSessionId}`);
       const data = await res.json();
