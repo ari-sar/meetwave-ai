@@ -18,7 +18,7 @@ const s3 = new S3Client({
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000,
+  timeout: 300000,
   maxRetries: 2
 });
 
