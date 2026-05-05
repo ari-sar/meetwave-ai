@@ -3,7 +3,6 @@ const multer = require("multer");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const rateLimiter = require("../middleware/rateLimiter");
 const { generatePreview } = require("../utils/image");
 const Job = require("../models/Job");
 const Session = require("../models/Session");
@@ -20,7 +19,7 @@ const upload = multer({
 });
 
 // POST /api/generate — accepts image, queues job, returns immediately.
-router.post("/", rateLimiter, upload.single("image"), async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image uploaded" });
   const tempFilePath = req.file.path;
 
