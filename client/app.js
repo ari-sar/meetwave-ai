@@ -1,7 +1,6 @@
-// Same-origin in production (Express serves /client). Falls back to localhost for `npm run client` dev.
-const API_BASE = (location.port === "5000" || location.protocol === "https:" || location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
-  ? ""
-  : "http://localhost:5000";
+// Same-origin always. Express serves /client in both dev (port 5000) and production.
+// Never hardcode localhost — it breaks production (resolves to user's machine, mixed-content blocked under HTTPS).
+const API_BASE = "";
 
 // PostHog initialization
 if (typeof posthog !== "undefined" && posthog) {
