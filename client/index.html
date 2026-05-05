@@ -96,11 +96,10 @@
         <p class="muted">High-res PNG · all 12 styles · yours forever</p>
       </div>
       <div id="razorpayMount">
-        <form id="razorpayPaymentForm">
-          <script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_SlA5LhmoLegzCw" async></script>
-        </form>
+        <button id="unlockBtn" class="btn btn-primary">Pay ₹49 to Unlock</button>
         <p id="paymentVerifyMsg" class="muted hidden" style="margin-top:10px;text-align:center;">Verifying payment…</p>
       </div>
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       <a id="downloadBtn" class="btn btn-primary hidden" download="meetwave-styles.png">↓ Download your report</a>
     </section>
 

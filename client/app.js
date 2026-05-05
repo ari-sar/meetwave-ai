@@ -344,16 +344,76 @@ function startPaymentPolling() {
   paymentPollTimerId = setTimeout(pollPayment, 3000);
 }
 
-// Track checkout_started when user interacts with the payment button area
-document.getElementById("razorpayMount")?.addEventListener("click", () => {
+async function startCheckout() {
   if (!currentSessionId) return;
+
   if (typeof posthog !== "undefined" && posthog) {
     posthog.capture("checkout_started");
   }
-  const verifyMsg = document.getElementById("paymentVerifyMsg");
-  if (verifyMsg) verifyMsg.classList.remove("hidden");
-  startPaymentPolling();
-}, { once: true });
+
+  try {
+    const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: currentSessionId })
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || "Order creation failed");
+
+    const rzp = new Razorpay({
+      key: order.keyId,
+      order_id: order.orderId,
+      amount: order.amount,
+      currency: order.currency,
+      name: "MeetWave AI",
+      description: "Style report unlock",
+      notes: { sessionId: currentSessionId },
+      handler: async (response) => {
+        const verifyMsg = document.getElementById("paymentVerifyMsg");
+        if (verifyMsg) verifyMsg.classList.remove("hidden");
+        try {
+          const confirmRes = await fetch(`${API_BASE}/api/payment/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: currentSessionId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          const data = await confirmRes.json();
+          if (!confirmRes.ok) throw new Error(data.error || "Payment confirmation failed");
+
+          if (typeof posthog !== "undefined" && posthog) {
+            posthog.capture("payment_successful", { amount: 4900, currency: "INR" });
+          }
+          if (verifyMsg) verifyMsg.classList.add("hidden");
+          unlockComparison();
+          const dl = document.getElementById("downloadBtn");
+          dl.href = `${API_BASE}/api/verify/${data.downloadToken}`;
+          dl.classList.remove("hidden");
+          const unlockBtn = document.getElementById("unlockBtn");
+          if (unlockBtn) unlockBtn.style.display = "none";
+        } catch (err) {
+          console.error("Confirm error:", err);
+          startPaymentPolling();
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          startPaymentPolling();
+        }
+      }
+    });
+    rzp.open();
+  } catch (err) {
+    console.error("Checkout error:", err);
+    alert("Could not start payment: " + err.message);
+  }
+}
+
+document.getElementById("unlockBtn")?.addEventListener("click", startCheckout);
 
 // Support overlay
 const supportOverlay = document.getElementById('supportOverlay');
