@@ -68,12 +68,6 @@ async function runJob(jobId, tempFilePath, sessionData) {
       await Job.findByIdAndUpdate(jobId, { stage });
     });
 
-    if (sessionData && typeof sessionData.save === "function") {
-      sessionData.freeCount += 1;
-      sessionData.lastSessionId = result.sessionId;
-      await sessionData.save();
-    }
-
     await Session.findOneAndUpdate(
       { lastSessionId: result.sessionId },
       { lastSessionId: result.sessionId },

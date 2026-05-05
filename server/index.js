@@ -56,16 +56,17 @@ app.get(/^\/(?!api|generated).*/, (_req, res) => {
 
 // Background cleanup: delete generated/* folders older than 7 days. Runs hourly.
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-function cleanupGenerated() {
+async function cleanupGenerated() {
   try {
-    for (const dir of fs.readdirSync(generatedDir)) {
+    const dirs = await fs.promises.readdir(generatedDir);
+    await Promise.all(dirs.map(async (dir) => {
       const full = path.join(generatedDir, dir);
-      const stat = fs.statSync(full);
+      const stat = await fs.promises.stat(full);
       if (stat.isDirectory() && Date.now() - stat.mtimeMs > SEVEN_DAYS_MS) {
-        fs.rmSync(full, { recursive: true, force: true });
+        await fs.promises.rm(full, { recursive: true, force: true });
         console.log(`🧹 Cleaned ${dir}`);
       }
-    }
+    }));
   } catch (err) {
     console.error("Cleanup error:", err.message);
   }

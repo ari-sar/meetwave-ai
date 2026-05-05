@@ -11,7 +11,7 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-const AMOUNT_PAISE = 1900;
+const AMOUNT_PAISE = 4900;
 
 router.post("/create-order", async (req, res) => {
   try {
@@ -120,6 +120,20 @@ async function markSessionPaid(sessionId) {
     { upsert: true, new: true }
   );
 }
+
+// GET /api/payment/status/:sessionId — SPA polls this after payment button interaction.
+router.get("/status/:sessionId", async (req, res) => {
+  try {
+    const session = await Session.findOne({ lastSessionId: req.params.sessionId }).lean();
+    if (!session) return res.json({ paid: false });
+    if (session.paid && session.downloadToken) {
+      return res.json({ paid: true, downloadToken: session.downloadToken });
+    }
+    res.json({ paid: false });
+  } catch (err) {
+    res.status(500).json({ error: "Status check failed" });
+  }
+});
 
 module.exports = router;
 module.exports.webhookHandler = webhookHandler;

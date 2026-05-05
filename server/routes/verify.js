@@ -16,7 +16,7 @@ router.get("/:token", async (req, res) => {
       return res.status(403).json({ error: "Token expired" });
     }
 
-    const filePath = path.resolve("uploads", "generated", session.lastSessionId, "comparison.png");
+    const filePath = path.resolve(__dirname, "..", "..", "uploads", "generated", session.lastSessionId, "comparison.png");
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
 
     res.setHeader("Content-Disposition", 'attachment; filename="meetwave-styles.png"');

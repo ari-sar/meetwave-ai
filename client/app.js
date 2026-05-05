@@ -261,82 +261,56 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   }
 });
 
-async function handlePaymentSuccess(razorpayResponse) {
-  if (!currentSessionId) return alert("Session expired. Please upload again.");
-  try {
-    const res = await fetch(`${API_BASE}/api/payment/confirm`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: currentSessionId,
-        razorpay_order_id: razorpayResponse.razorpay_order_id,
-        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
-        razorpay_signature: razorpayResponse.razorpay_signature
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Confirmation failed");
+let paymentPollTimerId = null;
 
-    // Track payment success
-    if (typeof posthog !== "undefined" && posthog) {
-      posthog.capture("payment_successful", { amount: 4900, currency: "INR" });
+function startPaymentPolling() {
+  if (!currentSessionId || paymentPollTimerId) return;
+
+  const verifyMsg = document.getElementById("paymentVerifyMsg");
+
+  const pollPayment = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/payment/status/${currentSessionId}`);
+      const data = await res.json();
+
+      if (data.paid && data.downloadToken) {
+        clearTimeout(paymentPollTimerId);
+        paymentPollTimerId = null;
+        if (verifyMsg) verifyMsg.classList.add("hidden");
+
+        if (typeof posthog !== "undefined" && posthog) {
+          posthog.capture("payment_successful", { amount: 4900, currency: "INR" });
+        }
+
+        unlockComparison();
+        const dl = document.getElementById("downloadBtn");
+        dl.href = `${API_BASE}/api/verify/${data.downloadToken}`;
+        dl.classList.remove("hidden");
+
+        const form = document.getElementById("razorpayPaymentForm");
+        if (form) form.style.display = "none";
+        return;
+      }
+    } catch (err) {
+      console.error("Payment poll error:", err);
     }
+    paymentPollTimerId = setTimeout(pollPayment, 4000);
+  };
 
-    unlockComparison();
-    const dl = document.getElementById("downloadBtn");
-    dl.href = `${API_BASE}/api/verify/${data.downloadToken}`;
-    dl.classList.remove("hidden");
-
-    const unlockBtn = document.getElementById("unlockBtn");
-    if (unlockBtn) unlockBtn.classList.add("hidden");
-  } catch (err) {
-    alert("Payment confirm error: " + err.message);
-  }
+  // Start polling 3s after user first sees the paywall (gives time to open Razorpay modal)
+  paymentPollTimerId = setTimeout(pollPayment, 3000);
 }
 
-async function startCheckout() {
-  if (!currentSessionId) return alert("Generate your styles first.");
-  const unlockBtn = document.getElementById("unlockBtn");
-  if (unlockBtn?.disabled) return;
-  if (unlockBtn) unlockBtn.disabled = true;
-
-  // Track checkout start
+// Track checkout_started when user interacts with the payment button area
+document.getElementById("razorpayMount")?.addEventListener("click", () => {
+  if (!currentSessionId) return;
   if (typeof posthog !== "undefined" && posthog) {
     posthog.capture("checkout_started");
   }
-
-  try {
-    const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: currentSessionId })
-    });
-    const order = await orderRes.json();
-    if (!orderRes.ok) throw new Error(order.error || "Order failed");
-
-    const rzp = new Razorpay({
-      key: order.keyId,
-      amount: order.amount,
-      currency: order.currency,
-      order_id: order.orderId,
-      name: "MeetWave AI",
-      description: "Unlock full style report",
-      handler: handlePaymentSuccess,
-      theme: { color: "#FF5A1F" },
-      modal: {
-        ondismiss: () => {
-          if (unlockBtn) unlockBtn.disabled = false;
-        }
-      }
-    });
-    rzp.open();
-  } catch (err) {
-    alert("Could not start checkout: " + err.message);
-    if (unlockBtn) unlockBtn.disabled = false;
-  }
-}
-
-document.getElementById('unlockBtn')?.addEventListener('click', startCheckout);
+  const verifyMsg = document.getElementById("paymentVerifyMsg");
+  if (verifyMsg) verifyMsg.classList.remove("hidden");
+  startPaymentPolling();
+}, { once: true });
 
 // Support overlay
 const supportOverlay = document.getElementById('supportOverlay');

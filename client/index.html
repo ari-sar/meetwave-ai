@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css">
   <script>
     !function(t,e){var o,n,p,r,a=[];function s(t){var e={api_host:"https://us.posthog.com",token:"phc_BgVcPSPhBPFL2BrcPSWZTC3zgyL5qNb8hFFZsbiCQwu5",loaded:!0,request_batching_enabled_decide_by_default:!0,request_batching_enabled:!0,batch_requests_min_count:50,batch_flush_interval_ms:10000,props:{},autocapture:!0,autocapture_opt_out_serverside_only:!1,loaded_only:!1,capture_pageleave:"if-enabled",capture_pageunload:!0,xhr_headers:{},inapp_protocol:"web",session_recording:{recordCrossOriginIframes:!1},advanced_disable_decide:!1,feature_flags:{},feature_flags_request_timeout_ms:3e4,on_xhr_error:function(t){console.error("PostHog request failed:",t)},on_decide_response:function(){},sanitize_properties:null,property_denylist:void 0,property_allowlist:void 0,secure_cookie:!1,cross_subdomain_cookie:!1,persistence:"localStorage+cookie",persistence_name:"ph_{}",opt_out_persistence_by_default:!1,opt_out_capturing_by_default:!1,opt_out_server_specified:!1,respect_dnt:!1,respect_dnt_cookie:!1,debug:!1,verbose:!1,test:!1,disable_compression:!1,disable_cookie:!1,disable_persistence:!1,disable_session_recording:!1,disable_web_experiments:!1,capture_dead_clicks:!0,correlation_server_proxy_enabled:!1,correlation_server_proxy_timeout:3e3,bootstrap_fields:void 0,term:void 0,...t};return e}(t);return o={...s(t),...e},void 0}(
-    {token:"phc_{{POSTHOG_API_KEY}}",api_host:"https://us.posthog.com"},window.posthog_config||{});
+    {token:"phc_BgVcPSPhBPFL2BrcPSWZTC3zgyL5qNb8hFFZsbiCQwu5",api_host:"https://us.posthog.com"},window.posthog_config||{});
   </script>
   <script async src="https://us-assets.i.posthog.com/array.js"></script>
 </head>
@@ -96,9 +96,11 @@
         <p class="muted">High-res PNG · all 12 styles · yours forever</p>
       </div>
       <div id="razorpayMount">
-        <button type="button" id="unlockBtn" class="btn btn-accent">Unlock for ₹49</button>
+        <form id="razorpayPaymentForm">
+          <script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_SlA5LhmoLegzCw" async></script>
+        </form>
+        <p id="paymentVerifyMsg" class="muted hidden" style="margin-top:10px;text-align:center;">Verifying payment…</p>
       </div>
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       <a id="downloadBtn" class="btn btn-primary hidden" download="meetwave-styles.png">↓ Download your report</a>
     </section>
 
