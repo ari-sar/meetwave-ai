@@ -22,9 +22,13 @@ const ALL_STYLES = [
   "Baddie",
   "Niche/Indie",
   "Vintage",
-  "Gen-Z Style Clothing",
+  "Gen-Z",
   "Sporty",
-  "Old Money"
+  "Old Money",
+  "Athleisure",
+  "Indo-Western Fusion",
+  "Y2K Revival",
+  "Bollywood Glam"
 ];
 
 async function analyzePortrait(imagePath) {
@@ -94,27 +98,55 @@ Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 
 
 async function prepareImageForEdit(imagePath) {
   const outPath = path.join(os.tmpdir(), `prepared-${uuidv4()}.png`);
+
+  const stats = await sharp(imagePath).stats();
+  const meanLum = (stats.channels[0].mean + stats.channels[1].mean + stats.channels[2].mean) / 3;
+  const TARGET_LUM = 165;
+  const brightnessFactor = Math.max(0.85, Math.min(1.6, TARGET_LUM / Math.max(meanLum, 40)));
+
   await sharp(imagePath)
     .resize(1024, 1536, { fit: "cover", position: "centre" })
     .normalise()
-    .modulate({ brightness: 1.1 })
+    .linear(1.05, 0)
+    .modulate({ brightness: brightnessFactor, saturation: 1.05 })
+    .gamma(1.0)
+    .toColorspace("srgb")
     .ensureAlpha()
     .png({ compressionLevel: 9 })
     .toFile(outPath);
-  console.log(`🖼️  Normalized + converted upload to PNG: ${outPath}`);
+
+  console.log(`🖼️  Adaptive-normalized upload (meanLum=${meanLum.toFixed(0)} → factor=${brightnessFactor.toFixed(2)}): ${outPath}`);
   return outPath;
 }
 
-const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Premium Clothing, Indian Style, Baddie, Niche/Indie, Vintage, Gen-Z Style Clothing, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short style-name labels, with no lengthy body text and no rating words like "Recommended", "Average", or "Avoid".
+const COMPARISON_PROMPT = `Create a personal outfit analysis card from the uploaded portrait.
 
-CRITICAL LIGHTING & COLOR REQUIREMENTS — these must NOT vary based on the input photo:
-- Render every panel as bright, evenly-lit studio photography on a clean off-white seamless background.
-- Use daylight-balanced color temperature (~5500K), high-key lighting, soft natural shadows.
-- All 12 panels must share identical brightness, contrast, saturation, and color grade.
-- Do NOT inherit, match, or carry over the lighting, color cast, ambient tone, or background of the input photo. Treat the input only as a reference for the subject's face and identity.
-- Outfits should look freshly photographed in a controlled, well-lit fashion studio — never dim, warm-cast, low-key, or environmental.
+LAYOUT (mandatory):
+- Exactly 16 panels arranged in a 4-column × 4-row grid. Every cell must be filled — no empty cells, no extra rows, no clipped panels.
+- All 16 panels must be fully visible inside the canvas, with equal-sized cells and small uniform gutters.
+- Off-white (#FAFAF7) seamless background behind every cell, identical across all 16.
+- Title "Outfit Analysis Card" centered at top. Below each cell, a single short style-name label only — no rating words, no body text, no descriptions.
 
-High resolution, information clearly presented, suitable for sharing on social media.`;
+FRAMING (mandatory for every cell):
+- Waist-up half-body shot only. Frame from just above the head down to roughly mid-torso/waist. Do NOT show legs, hips, or full body.
+- Subject centered in each cell, facing camera, neutral pose, arms relaxed.
+
+STYLES (in this exact order, top-left to bottom-right, row by row):
+Row 1: Korean, Streetwear, Tea-toned, Chic
+Row 2: Premium Clothing, Indian Style, Baddie, Niche/Indie
+Row 3: Vintage, Gen-Z, Sporty, Old Money
+Row 4: Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
+
+IDENTITY: Preserve the subject's facial features, skin tone, face shape, and hair across all 16 cells. Same person, 16 different outfits.
+
+LIGHTING & COLOR (mandatory — DO NOT inherit from input):
+- Bright, high-key studio photography. Daylight-balanced (~5500K). Soft, even shadows.
+- Off-white (#FAFAF7) seamless background in every cell, identical across all 16.
+- Identical brightness, contrast, saturation, and white balance in every cell.
+- Treat the input photo ONLY as a reference for the subject's identity. Discard its lighting, ambient color, background, and tone entirely.
+- Outfits must look freshly photographed in a controlled studio — never dim, warm-cast, low-key, or environmental.
+
+Clean, fashionable, magazine-quality. High resolution. Suitable for sharing.`;
 
 async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   const preparedBuffer = fs.readFileSync(preparedPath);
