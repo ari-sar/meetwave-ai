@@ -1,110 +1,203 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MeetWave AI — Find Your Aesthetic</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <link src="https://ik.imagekit.io/chumuk/favicon.ico?updatedAt=1777101735351">
-  <script>
-    !function(t,e){var o,n,p,r;void 0===e&&(e="posthog"),void 0===(o=window[e])&&(n=window[e]=function(){n.process?n.process.apply(n,arguments):n.queue.push(arguments)},n.queue=[],n._i=[],n.init=function(t,i,s){if(s)n._i.push([t,i,s]);else{var a=n._i.push([t,i,s]);n._i[a]||(n._i[a]={})}return n},n.capture=function(){n.queue.push(["capture"].concat(Array.prototype.slice.call(arguments,0)))}),n.init("phc_BgVcPSPhBPFL2BrcPSWZTC3zgyL5qNb8hFFZsbiCQwu5",{api_host:"https://us.posthog.com",person_profiles:"identified_only"})}();
-  </script>
-  <script async src="https://us-assets.i.posthog.com/array.js"></script>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MeetWave AI — Find Your Aesthetic</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="https://ik.imagekit.io/chumuk/favicon.ico?updatedAt=1777101735351"
+    />
+    <script>
+      !(function (t, e) {
+        var o, n, p, r;
+        (void 0 === e && (e = "posthog"),
+          void 0 === (o = window[e]) &&
+            ((n = window[e] =
+              function () {
+                n.process
+                  ? n.process.apply(n, arguments)
+                  : n.queue.push(arguments);
+              }),
+            (n.queue = []),
+            (n._i = []),
+            (n.init = function (t, i, s) {
+              if (s) n._i.push([t, i, s]);
+              else {
+                var a = n._i.push([t, i, s]);
+                n._i[a] || (n._i[a] = {});
+              }
+              return n;
+            }),
+            (n.capture = function () {
+              n.queue.push(
+                ["capture"].concat(Array.prototype.slice.call(arguments, 0)),
+              );
+            })),
+          n.init("phc_BgVcPSPhBPFL2BrcPSWZTC3zgyL5qNb8hFFZsbiCQwu5", {
+            api_host: "https://us.posthog.com",
+            person_profiles: "identified_only",
+          }));
+      })();
+    </script>
+    <script async src="https://us-assets.i.posthog.com/array.js"></script>
+  </head>
+  <body>
+    <nav class="topbar">
+      <span class="logo">MeetWave</span>
+      <span class="logo-tag">AI</span>
+      <button id="helpBtn" class="help-btn" title="Contact Support">
+        Help
+      </button>
+    </nav>
 
-  <nav class="topbar">
-    <span class="logo">MeetWave</span>
-    <span class="logo-tag">AI</span>
-    <button id="helpBtn" class="help-btn" title="Contact Support">Help</button>
-  </nav>
-
-  <!-- Support Overlay -->
-  <div id="supportOverlay" class="support-overlay hidden">
-    <div class="support-modal">
-      <button id="closeSupportBtn" class="close-btn">×</button>
-      <h2>Contact Support</h2>
-      <form id="supportForm">
-        <input type="tel" id="phoneInput" placeholder="Your phone number" required>
-        <textarea id="messageInput" placeholder="Your message" rows="5" required></textarea>
-        <button type="submit" class="btn btn-primary">Send Message</button>
-      </form>
-      <p id="supportStatus" class="muted hidden"></p>
+    <!-- Support Overlay -->
+    <div id="supportOverlay" class="support-overlay hidden">
+      <div class="support-modal">
+        <button id="closeSupportBtn" class="close-btn">×</button>
+        <h2>Contact Support</h2>
+        <form id="supportForm">
+          <input
+            type="tel"
+            id="phoneInput"
+            placeholder="Your phone number"
+            required
+          />
+          <textarea
+            id="messageInput"
+            placeholder="Your message"
+            rows="5"
+            required
+          ></textarea>
+          <button type="submit" class="btn btn-primary">Send Message</button>
+        </form>
+        <p id="supportStatus" class="muted hidden"></p>
+      </div>
     </div>
-  </div>
 
-  <main class="page">
-
-    <!-- Sample Slider (≤10vh) -->
-    <section id="sampleSlider" class="slider" aria-label="Sample style cards">
-      <div class="slider-track">
-        <img src="https://ik.imagekit.io/chumuk/1.png?updatedAt=1777952143518" alt="Sample 1" loading="lazy">
-        <img src="https://ik.imagekit.io/chumuk/2.png?updatedAt=1777952135101" alt="Sample 2" loading="lazy">
-        <img src="https://ik.imagekit.io/chumuk/3.png?updatedAt=1777952143518" alt="Sample 3" loading="lazy">
-        <img src="https://ik.imagekit.io/chumuk/4.png?updatedAt=1777952143518" alt="Sample 4" loading="lazy">
-        <img src="https://ik.imagekit.io/chumuk/5.png?updatedAt=1777952143518" alt="Sample 5" loading="lazy">
-      </div>
-    </section>
-
-    <!-- Hero -->
-    <header class="hero">
-      <h1>See yourself in <em>12 styles</em>.</h1>
-      <p>Drop a selfie. Get a premium style report in seconds.</p>
-    </header>
-
-    <!-- Upload Section -->
-    <section id="uploadSection" class="upload-card">
-      <input type="file" id="fileInput" accept="image/*" hidden />
-      <label for="fileInput" class="upload-drop">
-        <span class="upload-emoji">↑</span>
-        <span class="upload-title">Upload your photo</span>
-        <span class="upload-sub">JPEG or PNG · up to 5MB</span>
-      </label>
-      <button type="button" id="uploadBtn" class="btn btn-primary hidden">Generate my styles</button>
-    </section>
-
-    <!-- Loading: skeleton matches generated image aspect (1024×1536 = 2:3) -->
-    <section id="loadingState" class="loading hidden">
-      <p id="loadingText" class="muted skeleton-caption">Crafting your style report…</p>
-      <div class="skeleton-card" aria-hidden="true">
-        <div class="skeleton-shimmer"></div>
-        <div class="skeleton-grid">
-          <div class="skeleton-cell"></div><div class="skeleton-cell"></div><div class="skeleton-cell"></div>
-          <div class="skeleton-cell"></div><div class="skeleton-cell"></div><div class="skeleton-cell"></div>
-          <div class="skeleton-cell"></div><div class="skeleton-cell"></div><div class="skeleton-cell"></div>
-          <div class="skeleton-cell"></div><div class="skeleton-cell"></div><div class="skeleton-cell"></div>
+    <main class="page">
+      <!-- Sample Slider (≤10vh) -->
+      <section id="sampleSlider" class="slider" aria-label="Sample style cards">
+        <div class="slider-track">
+          <img
+            src="https://ik.imagekit.io/chumuk/1.png?updatedAt=1777952143518"
+            alt="Sample 1"
+            loading="lazy"
+          />
+          <img
+            src="https://ik.imagekit.io/chumuk/2.png?updatedAt=1777952135101"
+            alt="Sample 2"
+            loading="lazy"
+          />
+          <img
+            src="https://ik.imagekit.io/chumuk/3.png?updatedAt=1777952143518"
+            alt="Sample 3"
+            loading="lazy"
+          />
+          <img
+            src="https://ik.imagekit.io/chumuk/4.png?updatedAt=1777952143518"
+            alt="Sample 4"
+            loading="lazy"
+          />
+          <img
+            src="https://ik.imagekit.io/chumuk/5.png?updatedAt=1777952143518"
+            alt="Sample 5"
+            loading="lazy"
+          />
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Results -->
-    <section id="resultsSection" class="results hidden">
-      <h2 class="results-title">Your style report is ready</h2>
-      <p class="muted">All 12 styles · pay to reveal</p>
-      <div id="resultsGrid"></div>
-      <div id="bestMatchSection"></div>
-    </section>
+      <!-- Hero -->
+      <header class="hero">
+        <h1>See yourself in <em>16 styles</em>.</h1>
+        <p>Drop a selfie. Get a premium style report in seconds.</p>
+      </header>
 
-    <!-- Unlock -->
-    <section id="unlockSection" class="unlock hidden">
-      <div class="unlock-headline">
-        <span class="lock-pill">🔒 Locked</span>
-        <h3>Pay <span class="price-original">₹99</span> <span class="price-current">₹49</span> to unlock & download</h3>
-        <p class="muted">High-res PNG · all 12 styles · yours forever</p>
-      </div>
-      <div id="razorpayMount">
-        <button id="unlockBtn" class="btn btn-primary">Pay ₹49 to Unlock</button>
-        <p id="paymentVerifyMsg" class="muted hidden" style="margin-top:10px;text-align:center;">Verifying payment…</p>
-      </div>
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-      <a id="downloadBtn" class="btn btn-primary hidden" download="meetwave-styles.png">↓ Download your report</a>
-    </section>
+      <!-- Upload Section -->
+      <section id="uploadSection" class="upload-card">
+        <input type="file" id="fileInput" accept="image/*" hidden />
+        <label for="fileInput" class="upload-drop">
+          <span class="upload-emoji">↑</span>
+          <span class="upload-title">Upload your photo</span>
+          <span class="upload-sub">JPEG or PNG · up to 5MB</span>
+        </label>
+        <button type="button" id="uploadBtn" class="btn btn-primary hidden">
+          Generate my styles
+        </button>
+      </section>
 
-  </main>
+      <!-- Loading: skeleton matches generated image aspect (1024×1536 = 2:3) -->
+      <section id="loadingState" class="loading hidden">
+        <p id="loadingText" class="muted skeleton-caption">
+          Crafting your style report…
+        </p>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-shimmer"></div>
+          <div class="skeleton-grid">
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+            <div class="skeleton-cell"></div>
+          </div>
+        </div>
+      </section>
 
-  <script src="app.js"></script>
-</body>
+      <!-- Results -->
+      <section id="resultsSection" class="results hidden">
+        <h2 class="results-title">Your style report is ready</h2>
+        <p class="muted">All 16 styles · pay to reveal</p>
+        <div id="resultsGrid"></div>
+        <div id="bestMatchSection"></div>
+      </section>
+
+      <!-- Unlock -->
+      <section id="unlockSection" class="unlock hidden">
+        <div class="unlock-headline">
+          <span class="lock-pill">🔒 Locked</span>
+          <h3>
+            Pay <span class="price-original">₹99</span>
+            <span class="price-current">₹49</span> to unlock & download
+          </h3>
+          <p class="muted">High-res PNG · all 16 styles · yours forever</p>
+        </div>
+        <div id="razorpayMount">
+          <button id="unlockBtn" class="btn btn-primary">
+            Pay ₹49 to Unlock
+          </button>
+          <p
+            id="paymentVerifyMsg"
+            class="muted hidden"
+            style="margin-top: 10px; text-align: center"
+          >
+            Verifying payment…
+          </p>
+        </div>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <a
+          id="downloadBtn"
+          class="btn btn-primary hidden"
+          download="meetwave-styles.png"
+          >↓ Download your report</a
+        >
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
 </html>

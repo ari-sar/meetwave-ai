@@ -170,7 +170,7 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
     image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
     prompt,
     n: 1,
-    size: "1024x1536"
+    size: "auto"
   });
 
   const b64 = response.data[0].b64_json;
@@ -193,7 +193,7 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
 
 async function generatePreview(imagePath, onStage = async () => {}) {
   try {
-    console.log("📸 Starting full comparison generation (single AI call, all 12 styles)...");
+    console.log("📸 Starting full comparison generation (single AI call, all 16 styles)...");
 
     await onStage("analyzing");
     const analysis = await analyzePortrait(imagePath);
@@ -202,7 +202,7 @@ async function generatePreview(imagePath, onStage = async () => {}) {
     await onStage("preparing");
     const preparedPath = await prepareImageForEdit(imagePath);
 
-    console.log(`🎨 Generating comparison card with all 12 styles...`);
+    console.log(`🎨 Generating comparison card with all 16 styles...`);
     await onStage("generating");
     const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
 
