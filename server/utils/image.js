@@ -156,15 +156,19 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   };
 }
 
-async function generatePreview(imagePath) {
+async function generatePreview(imagePath, onStage = async () => {}) {
   try {
     console.log("📸 Starting full comparison generation (single AI call, all 12 styles)...");
 
+    await onStage("analyzing");
     const analysis = await analyzePortrait(imagePath);
     const sessionId = uuidv4();
+
+    await onStage("preparing");
     const preparedPath = await prepareImageForEdit(imagePath);
 
     console.log(`🎨 Generating comparison card with all 12 styles...`);
+    await onStage("generating");
     const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
 
     console.log("✅ Comparison card generated");

@@ -1,3 +1,4 @@
+const API_BASE = "http://localhost:5000";
 let currentSessionId = null;
 
 document.getElementById('fileInput').addEventListener('change', function() {
@@ -75,6 +76,58 @@ function renderMetadata(data) {
   `;
 }
 
+const STAGE_MESSAGES = {
+  queued: "Queuing your request…",
+  analyzing: "Analyzing your features…",
+  preparing: "Matching style aesthetics…",
+  generating: "Generating your report card…",
+  done: "Finalizing the details…"
+};
+
+function pollJob(jobId) {
+  const loadingText = document.getElementById("loadingText");
+  let cancelled = false;
+
+  const tick = async () => {
+    if (cancelled) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/generate/status/${jobId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Status check failed");
+
+      if (data.stage && STAGE_MESSAGES[data.stage]) {
+        loadingText.textContent = STAGE_MESSAGES[data.stage];
+      }
+
+      if (data.status === "done") {
+        cancelled = true;
+        currentSessionId = data.result.sessionId;
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("resultsSection").classList.remove("hidden");
+        document.getElementById("unlockSection").classList.remove("hidden");
+        renderComparison(data.result);
+        renderMetadata(data.result);
+        return;
+      }
+
+      if (data.status === "failed") {
+        cancelled = true;
+        alert("Generation failed: " + (data.error || "unknown error"));
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("uploadSection").classList.remove("hidden");
+        return;
+      }
+
+      setTimeout(tick, 3000);
+    } catch (err) {
+      console.error("Poll error:", err);
+      setTimeout(tick, 5000);
+    }
+  };
+
+  tick();
+}
+
 document.getElementById('uploadBtn').addEventListener('click', async function(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -90,48 +143,25 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   document.getElementById("loadingState").classList.remove("hidden");
   document.getElementById("resultsSection").classList.add("hidden");
   document.getElementById("unlockSection").classList.add("hidden");
-
-  const loadingText = document.getElementById("loadingText");
-  const messages = [
-    "Analyzing your features…",
-    "Matching style aesthetics…",
-    "Generating your report card…",
-    "Finalizing the details…"
-  ];
-  let i = 0;
-  const interval = setInterval(() => {
-    i = (i + 1) % messages.length;
-    loadingText.textContent = messages[i];
-  }, 2500);
+  document.getElementById("loadingText").textContent = STAGE_MESSAGES.queued;
 
   try {
-    const res = await fetch("http://localhost:5000/api/generate", {
+    const res = await fetch(`${API_BASE}/api/generate`, {
       method: "POST",
       headers: { "x-fingerprint": getFingerprint() },
       body: formData
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Generation failed");
+    if (!res.ok) throw new Error(data.error || "Upload failed");
 
-    clearInterval(interval);
-    currentSessionId = data.sessionId;
-
-    document.getElementById("loadingState").classList.add("hidden");
-    document.getElementById("resultsSection").classList.remove("hidden");
-    document.getElementById("unlockSection").classList.remove("hidden");
-
-    renderComparison(data);
-    renderMetadata(data);
+    pollJob(data.jobId);
   } catch (err) {
-    clearInterval(interval);
     console.error(err);
     alert("Error: " + err.message);
     document.getElementById("loadingState").classList.add("hidden");
     document.getElementById("uploadSection").classList.remove("hidden");
   }
 });
-
-const API_BASE = "http://localhost:5000";
 
 async function handlePaymentSuccess(razorpayResponse) {
   if (!currentSessionId) return alert("Session expired. Please upload again.");
