@@ -1,5 +1,3 @@
-// Same-origin always. Express serves /client in both dev (port 5000) and production.
-// Never hardcode localhost — it breaks production (resolves to user's machine, mixed-content blocked under HTTPS).
 const API_BASE = "";
 
 // PostHog initialization
@@ -7,13 +5,37 @@ if (typeof posthog !== "undefined" && posthog) {
   posthog.capture("page_visit");
 }
 
-// === Lockout state (single source of truth) ===
 let isJobInProgress = false;
 let activePollTimerId = null;
 let activePollJobId = null;
 let currentSessionId = null;
 
-// 3) Intercept overlay — full-screen invisible shield, blocks clicks/keys.
+// Ensure persistent lock state is checked on page load
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const fingerprint = getFingerprint();
+    const res = await fetch(`${API_BASE}/api/generate/session-check`, {
+      headers: { 'x-fingerprint': fingerprint }
+    });
+    
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    if (data.locked && data.lastJobId) {
+      console.log("User is locked. Restoring previous session.");
+      // Hide upload instantly
+      document.getElementById("uploadSection").classList.add("hidden");
+      document.getElementById("loadingState").classList.remove("hidden");
+      document.getElementById("loadingText").textContent = "Restoring your report...";
+      
+      // Hook straight into the polling logic to pull down the locked image
+      pollJob(data.lastJobId);
+    }
+  } catch (err) {
+    console.error("Failed to restore session state:", err);
+  }
+});
+
 function ensureInterceptOverlay() {
   let el = document.getElementById("interceptOverlay");
   if (el) return el;
@@ -21,7 +43,6 @@ function ensureInterceptOverlay() {
   el.id = "interceptOverlay";
   el.setAttribute("aria-hidden", "true");
   el.style.cssText = "position:fixed;inset:0;z-index:9999;background:transparent;cursor:wait;display:none;";
-  // Swallow every interaction.
   ["click", "mousedown", "mouseup", "touchstart", "touchend", "keydown", "keyup", "submit"].forEach(evt => {
     el.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, { capture: true });
   });
@@ -31,7 +52,6 @@ function ensureInterceptOverlay() {
 function showInterceptOverlay() { ensureInterceptOverlay().style.display = "block"; }
 function hideInterceptOverlay() { ensureInterceptOverlay().style.display = "none"; }
 
-// 2) Hard input lock — disables form controls at the DOM level.
 function setUploadInputsDisabled(disabled) {
   const fileInput = document.getElementById("fileInput");
   const uploadBtn = document.getElementById("uploadBtn");
@@ -45,7 +65,6 @@ function setUploadInputsDisabled(disabled) {
   if (dropLabel) dropLabel.style.pointerEvents = disabled ? "none" : "";
 }
 
-// 4) Singleton polling — kill any existing timer before starting a new one.
 function stopPolling() {
   if (activePollTimerId) {
     clearTimeout(activePollTimerId);
@@ -150,21 +169,18 @@ const STAGE_MESSAGES = {
 };
 
 function pollJob(jobId) {
-  // Singleton: kill any prior loop before starting.
   stopPolling();
   activePollJobId = jobId;
 
   const loadingText = document.getElementById("loadingText");
 
   const tick = async () => {
-    // If a different job has taken over (or we were stopped), bail.
     if (activePollJobId !== jobId) return;
     try {
       const res = await fetch(`${API_BASE}/api/generate/status/${jobId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Status check failed");
 
-      // Late response from a stale loop — discard.
       if (activePollJobId !== jobId) return;
 
       if (data.stage && STAGE_MESSAGES[data.stage]) {
@@ -179,11 +195,9 @@ function pollJob(jobId) {
         document.getElementById("unlockSection").classList.remove("hidden");
         renderComparison(data.result);
         renderMetadata(data.result);
-        // Track paywall view
         if (typeof posthog !== "undefined" && posthog) {
           posthog.capture("paywall_viewed");
         }
-        // Result is on screen — release the shield so the user can click Unlock.
         unlockUI();
         return;
       }
@@ -213,7 +227,6 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   event.preventDefault();
   event.stopPropagation();
 
-  // 1) Boolean gatekeeper — first check, before anything else.
   if (isJobInProgress) {
     console.warn("Job already in progress; click ignored.");
     return;
@@ -223,12 +236,10 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   const file = fileInput.files[0];
   if (!file) return alert("Please select an image first.");
 
-  // Track upload event
   if (typeof posthog !== "undefined" && posthog) {
     posthog.capture("image_uploaded");
   }
 
-  // Lock immediately, BEFORE any await.
   lockUI();
 
   const formData = new FormData();
@@ -246,14 +257,19 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
       headers: { "x-fingerprint": getFingerprint() },
       body: formData
     });
+    
+    // SAFE JSON PARSING TO FIX THE "JSON ERROR" ISSUE
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ error: "A server error occurred." }));
+      throw new Error(errData.error);
+    }
+    
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Upload failed");
-
-    // Polling continues to hold the lock until job completes/fails.
     pollJob(data.jobId);
+    
   } catch (err) {
     console.error(err);
-    alert("Error: " + err.message);
+    alert(err.message);
     document.getElementById("loadingState").classList.add("hidden");
     document.getElementById("uploadSection").classList.remove("hidden");
     unlockUI();
@@ -340,7 +356,6 @@ function startPaymentPolling() {
     paymentPollTimerId = setTimeout(pollPayment, 4000);
   };
 
-  // Start polling 3s after user first sees the paywall (gives time to open Razorpay modal)
   paymentPollTimerId = setTimeout(pollPayment, 3000);
 }
 

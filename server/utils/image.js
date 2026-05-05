@@ -122,14 +122,17 @@ async function prepareImageForEdit(imagePath) {
 const COMPARISON_PROMPT = `Create a personal outfit analysis card from the uploaded portrait.
 
 LAYOUT (mandatory):
-- Exactly 16 panels arranged in a 4-column × 4-row grid. Every cell must be filled — no empty cells, no extra rows, no clipped panels.
-- All 16 panels must be fully visible inside the canvas, with equal-sized cells and small uniform gutters.
-- Off-white (#FAFAF7) seamless background behind every cell, identical across all 16.
-- Title "Outfit Analysis Card" centered at top. Below each cell, a single short style-name label only — no rating words, no body text, no descriptions.
+- The canvas is divided into exactly 16 equal cells: 4 columns × 4 rows. No more, no less.
+- Every cell contains exactly one styled portrait. Total portraits = 16. Do not add any additional portraits, faces, or heads anywhere on the canvas beyond these 16.
+- After rendering all 16 cells, any remaining canvas space must be filled with solid off-white (#FAFAF7) only — no extra faces, no decorative elements, no repeated heads, no filler portraits.
+- All 16 cells must be fully visible and unclipped. Equal-sized cells, small uniform gutters.
+- Title "Outfit Analysis Card" centered at the top. Below each cell, one short style-name label — no rating words, no descriptions.
 
 FRAMING (mandatory for every cell):
 - Waist-up half-body shot only. Frame from just above the head down to roughly mid-torso/waist. Do NOT show legs, hips, or full body.
 - Subject centered in each cell, facing camera, neutral pose, arms relaxed.
+
+STRICT COUNT: There are exactly 16 portraits total. Do not render a 17th, 18th, or any additional portrait regardless of remaining space.
 
 STYLES (in this exact order, top-left to bottom-right, row by row):
 Row 1: Korean, Streetwear, Tea-toned, Chic

@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const Session = require("../models/Session");
+const Device = require("../models/Device"); // Import persistent device model
 const { generateHash } = require("../utils/hash");
 
 const router = express.Router();
@@ -42,7 +43,7 @@ router.post("/create-order", async (req, res) => {
   }
 });
 
-// Client-side success handler from Checkout — verifies razorpay signature on (order_id|payment_id).
+// Client-side success handler
 router.post("/confirm", async (req, res) => {
   try {
     const { sessionId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -60,6 +61,13 @@ router.post("/confirm", async (req, res) => {
     }
 
     const session = await markSessionPaid(sessionId);
+    
+    // UNLOCK DEVICE: Race condition safeguard 
+    await Device.findOneAndUpdate(
+      { unpaidJobId: sessionId }, 
+      { $set: { isLocked: false, unpaidJobId: null } }
+    );
+
     res.json({ downloadToken: session.downloadToken });
   } catch (error) {
     console.error("Payment confirm error:", error.message);
@@ -67,11 +75,11 @@ router.post("/confirm", async (req, res) => {
   }
 });
 
-// Razorpay webhook — server-side source of truth. Mounted with raw body in server/index.js.
+// Razorpay webhook — server-side source of truth
 async function webhookHandler(req, res) {
   try {
     const signature = req.headers["x-razorpay-signature"];
-    const rawBody = req.body; // Buffer (because of express.raw)
+    const rawBody = req.body; 
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
       .update(rawBody)
@@ -91,15 +99,23 @@ async function webhookHandler(req, res) {
         console.warn("⚠️ Webhook missing notes.sessionId");
         return res.status(200).send("ok");
       }
+      
       await markSessionPaid(sessionId);
-      console.log(`✓ Webhook: session ${sessionId} marked paid`);
+      
+      // UNLOCK DEVICE: User paid, they can generate again
+      await Device.findOneAndUpdate(
+        { unpaidJobId: sessionId }, 
+        { $set: { isLocked: false, unpaidJobId: null } }
+      );
+      
+      console.log(`✓ Webhook: session ${sessionId} marked paid and device unlocked`);
     } else {
       console.log(`Webhook event ignored: ${event}`);
     }
 
     res.status(200).send("ok");
   } catch (error) {
-    console.error("Webhook error:", error.message);
+    console.error("Webhook error:", error.stack);
     res.status(500).send("error");
   }
 }
@@ -108,20 +124,18 @@ async function markSessionPaid(sessionId) {
   const existing = await Session.findOne({ lastSessionId: sessionId });
   if (existing && existing.paid && existing.downloadToken) return existing;
 
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET env var required");
-  }
+  if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET env var required");
+  
   const downloadToken = generateHash(`${sessionId}:${Date.now()}:${process.env.JWT_SECRET}`);
-  const tokenIssuedAt = new Date();
-
+  
   return Session.findOneAndUpdate(
     { lastSessionId: sessionId },
-    { lastSessionId: sessionId, paid: true, downloadToken, tokenIssuedAt },
+    { lastSessionId: sessionId, paid: true, downloadToken, tokenIssuedAt: new Date() },
     { upsert: true, new: true }
   );
 }
 
-// GET /api/payment/status/:sessionId — SPA polls this after payment button interaction.
+// GET /api/payment/status/:sessionId
 router.get("/status/:sessionId", async (req, res) => {
   try {
     const session = await Session.findOne({ lastSessionId: req.params.sessionId }).lean();
