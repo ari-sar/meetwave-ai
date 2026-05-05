@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const fs = require("fs");
 const path = require("path");
 
 const app = express();
@@ -33,11 +32,6 @@ app.post("/api/payment/webhook", express.raw({ type: "application/json" }), paym
 
 app.use(express.json({ limit: "1mb" }));
 
-const generatedDir = path.join(__dirname, "..", "uploads", "generated");
-if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
-
-app.use("/generated", express.static(generatedDir, { maxAge: "1d", immutable: true }));
-
 // Serve client SPA same-origin in production.
 const clientDir = path.join(__dirname, "..", "client");
 app.use(express.static(clientDir));
@@ -54,24 +48,6 @@ app.get(/^\/(?!api|generated).*/, (_req, res) => {
   res.sendFile(path.join(clientDir, "index.html"));
 });
 
-// Background cleanup: delete generated/* folders older than 7 days. Runs hourly.
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-async function cleanupGenerated() {
-  try {
-    const dirs = await fs.promises.readdir(generatedDir);
-    await Promise.all(dirs.map(async (dir) => {
-      const full = path.join(generatedDir, dir);
-      const stat = await fs.promises.stat(full);
-      if (stat.isDirectory() && Date.now() - stat.mtimeMs > SEVEN_DAYS_MS) {
-        await fs.promises.rm(full, { recursive: true, force: true });
-        console.log(`🧹 Cleaned ${dir}`);
-      }
-    }));
-  } catch (err) {
-    console.error("Cleanup error:", err.message);
-  }
-}
-setInterval(cleanupGenerated, 60 * 60 * 1000);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {

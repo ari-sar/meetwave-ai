@@ -5,6 +5,16 @@ const path = require("path");
 const os = require("os");
 const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+
+const s3 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+  }
+});
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -163,14 +173,20 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   });
 
   const b64 = response.data[0].b64_json;
-  const filepath = path.join("uploads", "generated", sessionId, filename);
-  const dir = path.dirname(filepath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
+  const imageBuffer = Buffer.from(b64, "base64");
+  const r2Key = `generated/${sessionId}/${filename}`;
 
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME,
+    Key: r2Key,
+    Body: imageBuffer,
+    ContentType: "image/png"
+  }));
+
+  console.log(`☁️  Uploaded to R2: ${r2Key}`);
   return {
     url: `/generated/${sessionId}/${filename}`,
-    imagePath: filepath
+    r2Key
   };
 }
 
