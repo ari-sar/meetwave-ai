@@ -108,7 +108,10 @@ async function markSessionPaid(sessionId) {
   const existing = await Session.findOne({ lastSessionId: sessionId });
   if (existing && existing.paid && existing.downloadToken) return existing;
 
-  const downloadToken = generateHash(`${sessionId}:${Date.now()}:${process.env.JWT_SECRET || "dev-secret"}`);
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET env var required");
+  }
+  const downloadToken = generateHash(`${sessionId}:${Date.now()}:${process.env.JWT_SECRET}`);
   const tokenIssuedAt = new Date();
 
   return Session.findOneAndUpdate(

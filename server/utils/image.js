@@ -151,7 +151,7 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
   fs.writeFileSync(filepath, Buffer.from(b64, "base64"));
 
   return {
-    url: `http://localhost:5000/generated/${sessionId}/${filename}`,
+    url: `/generated/${sessionId}/${filename}`,
     imagePath: filepath
   };
 }

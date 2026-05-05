@@ -2,94 +2,104 @@
 
 ## What This Is
 
-A premium AI-powered style analysis platform. Users upload a portrait photo, get 3 free AI-styled preview images (DALL-E 2), then pay ₹19 to unlock a full 12-style report. MVP/POC stage.
+A premium AI-powered style analysis platform. Users upload a portrait, get a single 12-style comparison card (soft-blurred). They pay ₹19 via Razorpay to unlock + download the high-res PNG.
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| Backend | Node.js + Express.js (v4), entry at `server/index.js`, port 5000 |
-| Database | MongoDB Atlas via Mongoose — single `Session` model |
-| AI | OpenAI DALL-E 2 (`server/utils/image.js`) |
-| Payments | Stripe (mocked — `server/routes/payment.js` not production-ready) |
-| Auth | JWT + device fingerprinting (no login flow) |
-| Frontend | Vanilla JS SPA + Tailwind CSS via CDN (`client/`) |
+| Backend | Node.js + Express.js, entry at `server/index.js`, port 5000 |
+| Database | MongoDB Atlas via Mongoose — `Session` + `Job` models |
+| AI (vision) | OpenAI GPT-4o (`analyzePortrait` in `server/utils/image.js`) |
+| AI (image) | OpenAI `images.edit` with DALL-E 2 (`runImageEdit`) |
+| Payments | Razorpay Checkout + webhook (`server/routes/payment.js`) |
+| Auth | JWT secret + device fingerprinting (no login flow) |
+| Frontend | Vanilla JS SPA + custom CSS (light Gen-Z theme) |
+| Job model | Async generation with polling (avoids HTTP timeouts on long AI calls) |
 
 ## Directory Structure
 
 ```
 meetwave-ai/
 ├── server/
-│   ├── index.js                # Express app, MongoDB connection, middleware stack
+│   ├── index.js                # Express app, helmet, CORS lockdown, trust proxy, raw-body webhook mount, SPA static, cleanup cron
 │   ├── middleware/
-│   │   └── rateLimiter.js      # 2 free generations per IP+fingerprint; bypassed in dev
+│   │   └── rateLimiter.js      # 2 free generations per IP+fingerprint; bypassed if NODE_ENV !== production
 │   ├── models/
-│   │   └── Session.js          # Tracks IP, device fingerprint, free usage count
+│   │   ├── Session.js          # IP, fingerprint, freeCount, paid, downloadToken, tokenIssuedAt, lastSessionId, razorpayOrderId
+│   │   └── Job.js              # status (queued|running|done|failed), stage, result, error
 │   ├── routes/
-│   │   ├── generate.js         # POST /api/generate — core image generation endpoint
-│   │   ├── payment.js          # POST /api/payment/create-intent — Stripe (mocked)
-│   │   └── verify.js           # GET /api/verify/:token — token verification (mocked)
+│   │   ├── generate.js         # POST /api/generate (queues Job + returns 202), GET /api/generate/status/:jobId
+│   │   ├── payment.js          # POST /create-order, POST /confirm (HMAC verify), webhookHandler (raw body)
+│   │   └── verify.js           # GET /:token — validates token, streams comparison.png as attachment
 │   └── utils/
-│       ├── image.js            # DALL-E 2 integration, 3 parallel style requests
-│       └── hash.js             # Crypto utilities
+│       ├── image.js            # GPT-4o portrait analysis + DALL-E 2 single comparison card with stage callback
+│       └── hash.js             # SHA-256 helpers (used for download token)
 ├── client/
-│   ├── index.html              # Single page, glassmorphism UI
-│   ├── app.js                  # DOM logic, file upload, API calls, state management
-│   └── styles.css              # CSS variables, custom styles
-└── uploads/                    # Temp upload dir (files use os.tmpdir() in production)
+│   ├── index.html              # Light theme, sample slider, upload, skeleton loader, results, Razorpay Checkout
+│   ├── app.js                  # Upload → poll job status → render → Razorpay → download
+│   └── styles.css              # Inter + Instrument Serif, soft-white palette (#FAFAF7), accent #FF5A1F
+└── uploads/generated/<sessionId>/comparison.png
 ```
 
 ## API Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/generate` | Upload portrait → 3 DALL-E styled previews |
-| POST | `/api/payment/create-intent` | Create Stripe payment intent (mocked) |
-| GET | `/api/verify/:token` | Verify payment token (mocked) |
+| POST | `/api/generate` | Queue generation Job (returns 202 + jobId) |
+| GET | `/api/generate/status/:jobId` | Poll job status / get result |
+| POST | `/api/payment/create-order` | Create Razorpay order with notes.sessionId |
+| POST | `/api/payment/confirm` | Client-side success: verify HMAC, mark paid, return downloadToken |
+| POST | `/api/payment/webhook` | Razorpay server-to-server (raw body, x-razorpay-signature) |
+| GET | `/api/verify/:token` | Validate downloadToken, stream comparison.png as attachment |
+| GET | `/health` | Liveness probe |
 
 ## Core Flow
 
-1. User uploads portrait via `client/app.js`
-2. `POST /api/generate` — rate limiter checks IP+fingerprint against `Session` in MongoDB
-3. File saved to `os.tmpdir()`, sent to DALL-E 2 as 3 parallel requests (Urban Streetwear, Preppy Academia, Athletic Athleisure)
-4. Image URLs returned, temp file deleted
-5. After 2 free uses → upsell screen shown, Stripe payment flow triggered
-6. Post-payment verification via `/api/verify/:token` (currently mocked)
+1. User uploads portrait → `POST /api/generate` returns `{ jobId }` immediately.
+2. Worker (`runJob` in `routes/generate.js`) calls `generatePreview` which: GPT-4o analyzes → sharp normalises → DALL-E 2 creates the 12-style comparison card.
+3. Client polls `/api/generate/status/:jobId` every 3s, advances skeleton caption from `stage`.
+4. On `done`, results are rendered with soft 8px blur + lock chip.
+5. User clicks Unlock → `create-order` → Razorpay Checkout opens → success handler hits `/confirm` (signature verified) → image unblurs + download button reveals.
+6. Razorpay webhook is the server-side source of truth (sets `paid` even if user closes tab).
 
 ## Key Patterns
 
-- **Rate limiting**: IP + device fingerprint combo, DB-backed. Dev mode (`NODE_ENV !== "production"`) bypasses limits entirely.
-- **File uploads**: Multer → `os.tmpdir()` (avoids live-server refresh loops). Always cleaned up in finally/error blocks.
-- **Frontend state**: Progressive reveal — upload → loading spinner → results grid → upsell modal. Pure DOM manipulation, no framework.
-- **Device fingerprinting**: Built from `navigator` + `screen` properties, hashed client-side.
+- **Async jobs**: never block HTTP for AI calls. `setImmediate(runJob)` returns 202 in <500ms.
+- **Stale job recovery**: on startup, in-flight jobs are marked `failed` so clients get a clean error.
+- **Webhook raw body**: mounted with `express.raw({ type: 'application/json' })` BEFORE `express.json()`.
+- **Download tokens**: SHA-256 of `sessionId:timestamp:JWT_SECRET`, 1h TTL, validated against `Session.downloadToken`.
+- **Image normalization**: sharp `.normalise()` + `.modulate({ brightness: 1.1 })` so output lighting is consistent regardless of input.
+- **Multer hardening**: 5MB limit, `image/jpeg|png|webp` only.
+- **File cleanup**: hourly cron deletes `uploads/generated/*` folders older than 7 days.
 
-## What's Mocked / Not Production-Ready
+## Required Env Vars
 
-- Payment (`/api/payment/create-intent`) — Stripe integration scaffolded but not wired
-- Verification (`/api/verify/:token`) — returns mock success
-- DALL-E 2 does text-to-image only; no actual vision-based portrait analysis yet
+```
+MONGO_URI=mongodb+srv://...
+OPENAI_API_KEY=sk-...
+RAZORPAY_KEY_ID=rzp_live_xxx
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_WEBHOOK_SECRET=xxx
+JWT_SECRET=<random-256-bit>
+NODE_ENV=production
+ALLOWED_ORIGINS=https://ai.meetwavedigital.in
+PORT=5000
+```
 
 ## Dev Commands
 
 ```bash
-npm run dev      # nodemon server on port 5000
-npm run client   # live-server for client/
+npm run dev      # nodemon server on port 5000 (serves client/ same-origin)
 npm start        # production server
 ```
 
-## Notes for Future Work
+## Production Notes
 
-- Payment and verification routes need real Stripe webhook handling before launch
-- Consider upgrading to DALL-E 3 or GPT-4o Vision for actual portrait-aware styling
-- The `Session` model only tracks free usage — no user accounts exist
-- All credentials live in `.env` — rotate before any public exposure
+- Behind nginx/Cloudflare with HTTPS termination at the proxy. `app.set("trust proxy", 1)` is already set.
+- Razorpay webhook URL: `https://ai.meetwavedigital.in/api/payment/webhook`.
+- Helmet enabled; CSP currently disabled because Razorpay Checkout + Google Fonts CDN need allowlisting — tighten before launch.
 
 ## graphify
 
-This project has a graphify knowledge graph at graphify-out/.
-
-Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
+This project has a graphify knowledge graph at graphify-out/. Re-run `graphify update .` after major refactors so god nodes/communities reflect reality. The current graph.json is stale — it still references Stripe and the old per-style generation flow; regenerate after this change set.

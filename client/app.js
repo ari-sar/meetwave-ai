@@ -1,4 +1,7 @@
-const API_BASE = "http://localhost:5000";
+// Same-origin in production (Express serves /client). Falls back to localhost for `npm run client` dev.
+const API_BASE = (location.port === "5000" || location.protocol === "https:" || location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
+  ? ""
+  : "http://localhost:5000";
 let currentSessionId = null;
 
 document.getElementById('fileInput').addEventListener('change', function() {
