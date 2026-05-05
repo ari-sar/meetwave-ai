@@ -132,23 +132,24 @@ async function prepareImageForEdit(imagePath) {
 const COMPARISON_PROMPT = `Create a personal outfit analysis card from the uploaded portrait.
 
 LAYOUT (mandatory):
-- The canvas is divided into exactly 16 equal cells: 4 columns × 4 rows. No more, no less.
-- Every cell contains exactly one styled portrait. Total portraits = 16. Do not add any additional portraits, faces, or heads anywhere on the canvas beyond these 16.
-- After rendering all 16 cells, any remaining canvas space must be filled with solid off-white (#FAFAF7) only — no extra faces, no decorative elements, no repeated heads, no filler portraits.
-- All 16 cells must be fully visible and unclipped. Equal-sized cells, small uniform gutters.
-- Title "Outfit Analysis Card" centered at the top. Below each cell, one short style-name label — no rating words, no descriptions.
+- The canvas contains exactly 4 columns × 4 rows = 16 cells. There is no 5th row. Do not add a 5th row.
+- Every cell contains exactly one styled portrait. Total portraits = 16.
+- No title, no header text — portraits and style-name labels only.
+- Below each cell, one short style-name label only. No rating words, no descriptions.
+- All 16 cells fully visible and unclipped. Equal-sized cells, small uniform gutters.
+- After Bollywood Glam (cell 16, bottom-right), the image ends. Do not add any more portraits.
 
 FRAMING (mandatory for every cell):
 - Waist-up half-body shot only. Frame from just above the head down to roughly mid-torso/waist. Do NOT show legs, hips, or full body.
 - Subject centered in each cell, facing camera, neutral pose, arms relaxed.
 
-STRICT COUNT: There are exactly 16 portraits total. Do not render a 17th, 18th, or any additional portrait regardless of remaining space.
+HARD STOP RULE: Bollywood Glam is the 16th and final portrait. Render nothing after it. Any space below row 4 must be solid off-white (#FAFAF7) — no faces, no heads, no extra portraits.
 
 STYLES (in this exact order, top-left to bottom-right, row by row):
 Row 1: Korean, Streetwear, Tea-toned, Chic
 Row 2: Premium Clothing, Indian Style, Baddie, Niche/Indie
 Row 3: Vintage, Gen-Z, Sporty, Old Money
-Row 4: Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
+Row 4 (FINAL ROW): Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
 
 IDENTITY: Preserve the subject's facial features, skin tone, face shape, and hair across all 16 cells. Same person, 16 different outfits.
 
