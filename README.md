@@ -1,25 +1,44 @@
 # MeetWave AI
 
-MeetWave AI is a state-of-the-art platform designed to revolutionize how meeting waves are generated and managed using cutting-edge AI technologies.
+AI-powered personal style analysis. Upload a portrait, get a 12-style comparison card, pay ₹19 to unlock and download.
 
-## Features
-- **AI Generation**: Intelligent wave generation based on meeting dynamics.
-- **Secure Payments**: Integrated payment verification.
-- **Real-time Monitoring**: Session tracking and management.
-- **Premium Design**: Sleek, modern interface with glassmorphism and dynamic animations.
+## Stack
+- Node.js + Express
+- MongoDB Atlas (Mongoose)
+- OpenAI GPT-4o (vision) + DALL-E 2 (image edit)
+- Razorpay Checkout + webhook
+- Vanilla JS SPA
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB
-- Stripe Account (for payments)
+- Node.js v18+
+- MongoDB Atlas connection string
+- OpenAI API key
+- Razorpay account (test or live)
 
-### Installation
-1. Clone the repository.
-2. Run `npm install`.
-3. Configure your `.env` file.
-4. Start the server with `npm start`.
+### Install
+```bash
+npm install
+```
 
-### Development
-Run `npm run dev` for the server and serve the `client/` directory for the frontend.
+### Env vars (`.env`)
+```
+MONGO_URI=mongodb+srv://...
+OPENAI_API_KEY=sk-...
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_WEBHOOK_SECRET=xxx
+JWT_SECRET=<random-256-bit>
+NODE_ENV=development
+ALLOWED_ORIGINS=https://ai.meetwavedigital.in
+PORT=5000
+```
+
+### Run
+```bash
+npm run dev      # nodemon (serves client/ same-origin)
+npm start        # production
+```
+
+See `CLAUDE.md` for architecture details.

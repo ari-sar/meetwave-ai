@@ -17,30 +17,15 @@ const ALL_STYLES = [
   "Streetwear",
   "Tea-Toned",
   "Chic",
-  "Chanel-Inspired",
-  "Soft Feminine",
+  "Premium Clothing",
+  "Indian Style",
   "Baddie",
   "Niche/Indie",
   "Vintage",
-  "Preppy/Academia",
+  "Gen-Z Style Clothing",
   "Sporty",
   "Old Money"
 ];
-
-const STYLE_DESCRIPTIONS = {
-  "Korean": "minimalist Korean fashion with clean lines, earthy tones, and effortless elegance",
-  "Streetwear": "trendy urban streetwear with oversized silhouettes and bold graphics",
-  "Tea-Toned": "warm tea-toned earth tones with vintage-inspired cuts",
-  "Chic": "sophisticated chic style with tailored fits and neutral palette",
-  "Chanel-Inspired": "classic Chanel-inspired luxury with tweed and pearls",
-  "Soft Feminine": "soft feminine style with delicate fabrics and pastel colors",
-  "Baddie": "bold baddie aesthetic with dark colors and edgy attitude",
-  "Niche/Indie": "indie alternative style with vintage band tees and eclectic pieces",
-  "Vintage": "classic vintage style from the 1970s-1990s era",
-  "Preppy/Academia": "preppy academia style with structured blazers and classic cuts",
-  "Sporty": "athletic sporty style with performance wear and casual comfort",
-  "Old Money": "old money quiet luxury style with understated elegance and expensive basics"
-};
 
 async function analyzePortrait(imagePath) {
   try {
@@ -120,8 +105,6 @@ async function prepareImageForEdit(imagePath) {
   return outPath;
 }
 
-const FREE_TIER_STYLE = "Niche/Indie";
-
 const COMPARISON_PROMPT = `Outfit Analysis: Please use the portrait photo I've uploaded to create a high-quality personal outfit analysis card. Style categories to include: Korean, Streetwear, Tea-toned, Chic, Premium Clothing, Indian Style, Baddie, Niche/Indie, Vintage, Gen-Z Style Clothing, and Sporty. Preserve the subject's original facial features, skin tone, face shape, and real characteristics. Using a side-by-side comparison layout, show the effect of different outfits on the subject, clearly distinguishing between styles, making it immediately obvious which looks enhance the complexion and elevate overall quality. The layout should be clean and fashionable, resembling a professional image consultant report, visually driven throughout, using only short style-name labels, with no lengthy body text and no rating words like "Recommended", "Average", or "Avoid".
 
 CRITICAL LIGHTING & COLOR REQUIREMENTS — these must NOT vary based on the input photo:
@@ -175,7 +158,6 @@ async function generatePreview(imagePath, onStage = async () => {}) {
     return {
       sessionId,
       comparisonUrl,
-      allStyles: ALL_STYLES,
       ratings: analysis.ratings,
       bestMatch: analysis.bestMatch,
       tips: analysis.tips,
