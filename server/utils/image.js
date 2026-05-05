@@ -147,7 +147,7 @@ HARD STOP RULE: Bollywood Glam is the 16th and final portrait. Render nothing af
 
 STYLES (in this exact order, top-left to bottom-right, row by row):
 Row 1: Korean, Streetwear, Tea-toned, Chic
-Row 2: Premium Clothing, Indian Style, Baddie, Niche/Indie
+Row 2: Luxury, Indian Style, Baddie, Niche/Indie
 Row 3: Vintage, Gen-Z, Sporty, Old Money
 Row 4 (FINAL ROW): Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
 
@@ -186,7 +186,7 @@ async function runImageEdit(preparedPath, prompt, sessionId, filename) {
 
   console.log(`☁️  Uploaded to R2: ${r2Key}`);
   return {
-    url: `/generated/${sessionId}/${filename}`,
+    url: `${process.env.R2_PUBLIC_URL}/${r2Key}`,
     r2Key
   };
 }
