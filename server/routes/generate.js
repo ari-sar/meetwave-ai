@@ -6,7 +6,7 @@ const path = require("path");
 const { generatePreview } = require("../utils/image");
 const Job = require("../models/Job");
 const Session = require("../models/Session");
-const Device = require("../models/Device"); // Import persistent device model
+const Device = require("../models/Device");
 const rateLimiter = require("../middleware/rateLimiter"); // Import the rate limiter
 
 const router = express.Router();
@@ -134,6 +134,10 @@ async function runJob(jobId, tempFilePath, sessionData) {
       error: err.message || "Generation failed",
       finishedAt: new Date()
     }).catch(e => console.error("Fatal status update fail:", e));
+    await Device.updateOne(
+      { unpaidJobId: jobId },
+      { $set: { isLocked: false }, $unset: { unpaidJobId: "" } }
+    ).catch(e => console.error("Device unlock fail:", e));
   } finally {
     if (tempFilePath && fs.existsSync(tempFilePath)) {
       try { fs.unlinkSync(tempFilePath); } catch {}
