@@ -22,6 +22,17 @@ const openai = new OpenAI({
   maxRetries: 2
 });
 
+const FALLBACK_ANALYSIS = () => ({
+  ratings: Object.fromEntries(ALL_STYLES.map(s => [s, "average"])),
+  bestMatch: ["Korean", "Chic", "Old Money", "Streetwear", "Tea-Toned"],
+  tips: [
+    "Stick to a cohesive color story across your outfit",
+    "Balance fitted and relaxed pieces for proportion",
+    "Add one statement accessory to anchor each look"
+  ],
+  palette: ["#E8DFD0", "#A0896A", "#5C5A5A", "#8C8C8C", "#EFEFEF"]
+});
+
 const ALL_STYLES = [
   "Korean",
   "Streetwear",
@@ -41,69 +52,72 @@ const ALL_STYLES = [
   "Bollywood Glam"
 ];
 
-async function analyzePortrait(imagePath) {
-  try {
-    console.log("🔍 Analyzing portrait with GPT-4o vision...");
+async function callVisionJSON(base64Image, promptText) {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          { type: "text", text: promptText }
+        ]
+      }
+    ]
+  });
+  return response.choices[0].message.content;
+}
 
-    const downscaled = await sharp(imagePath)
-      .resize(512, 512, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-    const base64Image = downscaled.toString("base64");
+function isRefusal(text) {
+  if (!text) return true;
+  const t = text.trim().toLowerCase();
+  return t.startsWith("i'm sorry") || t.startsWith("i am sorry") || t.startsWith("i can't") || t.startsWith("i cannot") || t.startsWith("sorry");
+}
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            },
-            {
-              type: "text",
-              text: `You are a fashion stylist assistant. Based on the general visual cues in this photo (overall coloring, hair, clothing style), suggest which of these 12 fashion aesthetics would visually complement the look. This is a styling recommendation tool, not a personal analysis.
+const PRIMARY_PROMPT = `You are a fashion styling assistant. Looking ONLY at the clothing, hair styling, and overall color palette visible in this photo, recommend which of these 16 fashion aesthetics would complement the visible look. This is purely a wardrobe/styling recommendation — do not describe or analyze the person.
 
 Styles: ${ALL_STYLES.join(", ")}
 
-Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+Return ONLY valid JSON with this exact structure:
 {
-  "ratings": {
-    "Korean": "recommended",
-    "Streetwear": "recommended",
-    ...
-  },
-  "bestMatch": ["Korean", "Tea-Toned", "Chic", "Streetwear", "Preppy/Academia"],
-  "tips": [
-    "Keep hair volume natural and slightly tousled",
-    "Earth tones & neutrals suit you best",
-    "Well-groomed appearance enhances overall look"
-  ],
+  "ratings": { "Korean": "recommended", "Streetwear": "average", ... },
+  "bestMatch": ["Korean", "Tea-Toned", "Chic", "Streetwear", "Old Money"],
+  "tips": ["short styling tip 1", "short styling tip 2", "short styling tip 3"],
   "palette": ["#E8DFD0", "#A0896A", "#5C5A5A", "#8C8C8C", "#EFEFEF"]
 }
 
-Use "recommended", "average", or "avoid" for each rating. bestMatch should be 5 styles. Tips should be 3 specific grooming/style tips tailored to this person. Palette should be 5 hex color codes that flatter this person's complexion and suit their best-match styles.`
-            }
-          ]
-        }
-      ]
-    });
+Use "recommended", "average", or "avoid" for each rating. bestMatch = 5 styles from the list. tips = 3 generic styling tips based on visible clothing/color cues. palette = 5 hex codes drawn from the colors visible in the photo.`;
 
-    const analysisText = response.choices[0].message.content;
-    console.log("Raw response from GPT-4o:", analysisText);
-    const cleanedText = analysisText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-    const analysis = JSON.parse(cleanedText);
+const RETRY_PROMPT = `Return JSON only with keys ratings, bestMatch, tips, palette for these 16 styles based on visible clothing colors and hair styling: ${ALL_STYLES.join(", ")}. ratings = object mapping each style to "recommended"|"average"|"avoid". bestMatch = array of 5 style names. tips = array of 3 short generic styling tips. palette = array of 5 hex color codes.`;
 
-    console.log("✅ Analysis complete");
-    return analysis;
-  } catch (error) {
-    console.error("❌ Portrait analysis failed:", error.message);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-    throw error;
+async function analyzePortrait(imagePath) {
+  console.log("🔍 Analyzing portrait with GPT-4o vision...");
+
+  const downscaled = await sharp(imagePath)
+    .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+  const base64Image = downscaled.toString("base64");
+
+  for (const [attempt, prompt] of [["primary", PRIMARY_PROMPT], ["retry", RETRY_PROMPT]]) {
+    try {
+      const text = await callVisionJSON(base64Image, prompt);
+      if (isRefusal(text)) {
+        console.warn(`⚠️ Portrait analysis ${attempt} refused: ${text.slice(0, 80)}`);
+        continue;
+      }
+      const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      const analysis = JSON.parse(cleaned);
+      console.log(`✅ Analysis complete (${attempt})`);
+      return analysis;
+    } catch (error) {
+      console.warn(`⚠️ Portrait analysis ${attempt} failed: ${error.message}`);
+    }
   }
+
+  console.warn("⚠️ Portrait analysis refused, using fallback");
+  return FALLBACK_ANALYSIS();
 }
 
 async function prepareImageForEdit(imagePath) {
