@@ -112,7 +112,7 @@ function renderComparison(data) {
     <div class="comparison-wrap">
       <img id="comparisonImg" class="comparison-img" src="${data.comparisonUrl}" alt="Your style report">
       <div class="lock-overlay" id="lockOverlay">
-        <div class="lock-chip">🔒 Pay ₹49 to reveal</div>
+        <div class="lock-chip">🔒 Pay ₹49 to reveal <span class="lock-chip-arrow">↓</span></div>
       </div>
     </div>
   `;
