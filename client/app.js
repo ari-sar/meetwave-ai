@@ -337,3 +337,61 @@ async function startCheckout() {
 }
 
 document.getElementById('unlockBtn')?.addEventListener('click', startCheckout);
+
+// Support overlay
+const supportOverlay = document.getElementById('supportOverlay');
+const helpBtn = document.getElementById('helpBtn');
+const closeSupportBtn = document.getElementById('closeSupportBtn');
+const supportForm = document.getElementById('supportForm');
+const supportStatus = document.getElementById('supportStatus');
+
+helpBtn.addEventListener('click', () => {
+  supportOverlay.classList.remove('hidden');
+});
+
+closeSupportBtn.addEventListener('click', () => {
+  supportOverlay.classList.add('hidden');
+  supportForm.reset();
+  supportStatus.classList.add('hidden');
+});
+
+supportOverlay.addEventListener('click', (e) => {
+  if (e.target === supportOverlay) {
+    supportOverlay.classList.add('hidden');
+    supportForm.reset();
+    supportStatus.classList.add('hidden');
+  }
+});
+
+supportForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const phone = document.getElementById('phoneInput').value.trim();
+  const message = document.getElementById('messageInput').value.trim();
+
+  if (!phone || !message) return alert('Please fill all fields');
+
+  supportStatus.classList.remove('hidden');
+  supportStatus.textContent = 'Sending...';
+  supportStatus.style.color = 'var(--ink-soft)';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/support`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send');
+
+    supportStatus.textContent = '✓ Message sent! We\'ll get back to you soon.';
+    supportStatus.style.color = 'var(--accent)';
+    supportForm.reset();
+    setTimeout(() => {
+      supportOverlay.classList.add('hidden');
+      supportStatus.classList.add('hidden');
+    }, 2000);
+  } catch (err) {
+    supportStatus.textContent = 'Error: ' + err.message;
+    supportStatus.style.color = 'var(--accent)';
+  }
+});

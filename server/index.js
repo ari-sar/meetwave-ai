@@ -45,6 +45,7 @@ app.use(express.static(clientDir));
 app.use("/api/generate", require("./routes/generate"));
 app.use("/api/payment", paymentRouter);
 app.use("/api/verify", require("./routes/verify"));
+app.use("/api/support", require("./routes/support"));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

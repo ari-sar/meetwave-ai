@@ -19,7 +19,22 @@
   <nav class="topbar">
     <span class="logo">MeetWave</span>
     <span class="logo-tag">AI</span>
+    <button id="helpBtn" class="help-btn" title="Contact Support">?</button>
   </nav>
+
+  <!-- Support Overlay -->
+  <div id="supportOverlay" class="support-overlay hidden">
+    <div class="support-modal">
+      <button id="closeSupportBtn" class="close-btn">×</button>
+      <h2>Contact Support</h2>
+      <form id="supportForm">
+        <input type="tel" id="phoneInput" placeholder="Your phone number" required>
+        <textarea id="messageInput" placeholder="Your message" rows="5" required></textarea>
+        <button type="submit" class="btn btn-primary">Send Message</button>
+      </form>
+      <p id="supportStatus" class="muted hidden"></p>
+    </div>
+  </div>
 
   <main class="page">
 

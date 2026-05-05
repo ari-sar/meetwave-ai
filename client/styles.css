@@ -40,6 +40,18 @@ html, body {
 }
 .logo { font-family: 'Instrument Serif', serif; font-size: 1.5rem; letter-spacing: -0.5px; }
 .logo-tag { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; }
+.help-btn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.help-btn:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
 /* Page */
 .page { max-width: 480px; margin: 0 auto; padding: 0 20px 80px; }
@@ -287,6 +299,71 @@ html, body {
 .price-current {
   color: var(--accent);
   font-weight: 700;
+}
+
+/* Support Overlay */
+.support-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.support-overlay.hidden { display: none !important; }
+.support-modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+  transition: color 0.2s;
+}
+.close-btn:hover { color: var(--ink); }
+.support-modal h2 {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+}
+#supportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#supportForm input,
+#supportForm textarea {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: none;
+}
+#supportForm input:focus,
+#supportForm textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 90, 31, 0.1);
+}
+#supportStatus {
+  margin-top: 12px;
+  text-align: center;
 }
 
 /* Mobile tweaks */
