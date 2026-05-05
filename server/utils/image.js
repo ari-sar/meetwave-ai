@@ -148,7 +148,8 @@ const COMPARISON_PROMPT = `Create a personal outfit analysis card from the uploa
 LAYOUT (mandatory):
 - The canvas contains exactly 4 columns × 4 rows = 16 cells. There is no 5th row. Do not add a 5th row.
 - Every cell contains exactly one styled portrait. Total portraits = 16.
-- No title, no header text — portraits and style-name labels only.
+- At the very top of the canvas, a header band with the centered text "Outfit Analysis" in a refined serif italic typeface, ink-dark color on off-white (#FAFAF7) background.
+- Below the header band: portraits and style-name labels only.
 - Below each cell, one short style-name label only. No rating words, no descriptions.
 - All 16 cells fully visible and unclipped. Equal-sized cells, small uniform gutters.
 - After Bollywood Glam (cell 16, bottom-right), the image ends. Do not add any more portraits.
