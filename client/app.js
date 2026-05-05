@@ -2,9 +2,67 @@
 const API_BASE = (location.port === "5000" || location.protocol === "https:" || location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
   ? ""
   : "http://localhost:5000";
+
+// === Lockout state (single source of truth) ===
+let isJobInProgress = false;
+let activePollTimerId = null;
+let activePollJobId = null;
 let currentSessionId = null;
 
+// 3) Intercept overlay — full-screen invisible shield, blocks clicks/keys.
+function ensureInterceptOverlay() {
+  let el = document.getElementById("interceptOverlay");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "interceptOverlay";
+  el.setAttribute("aria-hidden", "true");
+  el.style.cssText = "position:fixed;inset:0;z-index:9999;background:transparent;cursor:wait;display:none;";
+  // Swallow every interaction.
+  ["click", "mousedown", "mouseup", "touchstart", "touchend", "keydown", "keyup", "submit"].forEach(evt => {
+    el.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, { capture: true });
+  });
+  document.body.appendChild(el);
+  return el;
+}
+function showInterceptOverlay() { ensureInterceptOverlay().style.display = "block"; }
+function hideInterceptOverlay() { ensureInterceptOverlay().style.display = "none"; }
+
+// 2) Hard input lock — disables form controls at the DOM level.
+function setUploadInputsDisabled(disabled) {
+  const fileInput = document.getElementById("fileInput");
+  const uploadBtn = document.getElementById("uploadBtn");
+  if (fileInput) fileInput.disabled = disabled;
+  if (uploadBtn) {
+    uploadBtn.disabled = disabled;
+    if (disabled) uploadBtn.setAttribute("aria-busy", "true");
+    else uploadBtn.removeAttribute("aria-busy");
+  }
+  const dropLabel = document.querySelector(".upload-drop");
+  if (dropLabel) dropLabel.style.pointerEvents = disabled ? "none" : "";
+}
+
+// 4) Singleton polling — kill any existing timer before starting a new one.
+function stopPolling() {
+  if (activePollTimerId) {
+    clearTimeout(activePollTimerId);
+    activePollTimerId = null;
+  }
+  activePollJobId = null;
+}
+
+function lockUI() {
+  isJobInProgress = true;
+  setUploadInputsDisabled(true);
+  showInterceptOverlay();
+}
+function unlockUI() {
+  isJobInProgress = false;
+  setUploadInputsDisabled(false);
+  hideInterceptOverlay();
+}
+
 document.getElementById('fileInput').addEventListener('change', function() {
+  if (isJobInProgress) return;
   const file = this.files[0];
   const uploadBtn = document.getElementById('uploadBtn');
   const dropTitle = document.querySelector('.upload-title');
@@ -88,43 +146,55 @@ const STAGE_MESSAGES = {
 };
 
 function pollJob(jobId) {
+  // Singleton: kill any prior loop before starting.
+  stopPolling();
+  activePollJobId = jobId;
+
   const loadingText = document.getElementById("loadingText");
-  let cancelled = false;
 
   const tick = async () => {
-    if (cancelled) return;
+    // If a different job has taken over (or we were stopped), bail.
+    if (activePollJobId !== jobId) return;
     try {
       const res = await fetch(`${API_BASE}/api/generate/status/${jobId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Status check failed");
+
+      // Late response from a stale loop — discard.
+      if (activePollJobId !== jobId) return;
 
       if (data.stage && STAGE_MESSAGES[data.stage]) {
         loadingText.textContent = STAGE_MESSAGES[data.stage];
       }
 
       if (data.status === "done") {
-        cancelled = true;
+        stopPolling();
         currentSessionId = data.result.sessionId;
         document.getElementById("loadingState").classList.add("hidden");
         document.getElementById("resultsSection").classList.remove("hidden");
         document.getElementById("unlockSection").classList.remove("hidden");
         renderComparison(data.result);
         renderMetadata(data.result);
+        // Result is on screen — release the shield so the user can click Unlock.
+        unlockUI();
         return;
       }
 
       if (data.status === "failed") {
-        cancelled = true;
+        stopPolling();
         alert("Generation failed: " + (data.error || "unknown error"));
         document.getElementById("loadingState").classList.add("hidden");
         document.getElementById("uploadSection").classList.remove("hidden");
+        unlockUI();
         return;
       }
 
-      setTimeout(tick, 3000);
+      activePollTimerId = setTimeout(tick, 3000);
     } catch (err) {
       console.error("Poll error:", err);
-      setTimeout(tick, 5000);
+      if (activePollJobId === jobId) {
+        activePollTimerId = setTimeout(tick, 5000);
+      }
     }
   };
 
@@ -135,9 +205,18 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   event.preventDefault();
   event.stopPropagation();
 
+  // 1) Boolean gatekeeper — first check, before anything else.
+  if (isJobInProgress) {
+    console.warn("Job already in progress; click ignored.");
+    return;
+  }
+
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
   if (!file) return alert("Please select an image first.");
+
+  // Lock immediately, BEFORE any await.
+  lockUI();
 
   const formData = new FormData();
   formData.append("image", file);
@@ -157,12 +236,14 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Upload failed");
 
+    // Polling continues to hold the lock until job completes/fails.
     pollJob(data.jobId);
   } catch (err) {
     console.error(err);
     alert("Error: " + err.message);
     document.getElementById("loadingState").classList.add("hidden");
     document.getElementById("uploadSection").classList.remove("hidden");
+    unlockUI();
   }
 });
 
@@ -196,6 +277,10 @@ async function handlePaymentSuccess(razorpayResponse) {
 
 async function startCheckout() {
   if (!currentSessionId) return alert("Generate your styles first.");
+  const unlockBtn = document.getElementById("unlockBtn");
+  if (unlockBtn?.disabled) return;
+  if (unlockBtn) unlockBtn.disabled = true;
+
   try {
     const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
       method: "POST",
@@ -214,11 +299,16 @@ async function startCheckout() {
       description: "Unlock full style report",
       handler: handlePaymentSuccess,
       theme: { color: "#FF5A1F" },
-      modal: { ondismiss: () => console.log("Checkout dismissed") }
+      modal: {
+        ondismiss: () => {
+          if (unlockBtn) unlockBtn.disabled = false;
+        }
+      }
     });
     rzp.open();
   } catch (err) {
     alert("Could not start checkout: " + err.message);
+    if (unlockBtn) unlockBtn.disabled = false;
   }
 }
 

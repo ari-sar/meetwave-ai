@@ -125,6 +125,7 @@ html, body {
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 .btn-primary { background: var(--ink); color: #fff; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.15); }
 .btn-accent { background: var(--accent); color: var(--accent-ink); }
