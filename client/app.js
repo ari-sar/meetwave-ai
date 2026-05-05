@@ -3,6 +3,11 @@ const API_BASE = (location.port === "5000" || location.protocol === "https:" || 
   ? ""
   : "http://localhost:5000";
 
+// PostHog initialization
+if (typeof posthog !== "undefined" && posthog) {
+  posthog.capture("page_visit");
+}
+
 // === Lockout state (single source of truth) ===
 let isJobInProgress = false;
 let activePollTimerId = null;
@@ -175,6 +180,10 @@ function pollJob(jobId) {
         document.getElementById("unlockSection").classList.remove("hidden");
         renderComparison(data.result);
         renderMetadata(data.result);
+        // Track paywall view
+        if (typeof posthog !== "undefined" && posthog) {
+          posthog.capture("paywall_viewed");
+        }
         // Result is on screen — release the shield so the user can click Unlock.
         unlockUI();
         return;
@@ -214,6 +223,11 @@ document.getElementById('uploadBtn').addEventListener('click', async function(ev
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
   if (!file) return alert("Please select an image first.");
+
+  // Track upload event
+  if (typeof posthog !== "undefined" && posthog) {
+    posthog.capture("image_uploaded");
+  }
 
   // Lock immediately, BEFORE any await.
   lockUI();
@@ -263,6 +277,11 @@ async function handlePaymentSuccess(razorpayResponse) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Confirmation failed");
 
+    // Track payment success
+    if (typeof posthog !== "undefined" && posthog) {
+      posthog.capture("payment_successful", { amount: 4900, currency: "INR" });
+    }
+
     unlockComparison();
     const dl = document.getElementById("downloadBtn");
     dl.href = `${API_BASE}/api/verify/${data.downloadToken}`;
@@ -280,6 +299,11 @@ async function startCheckout() {
   const unlockBtn = document.getElementById("unlockBtn");
   if (unlockBtn?.disabled) return;
   if (unlockBtn) unlockBtn.disabled = true;
+
+  // Track checkout start
+  if (typeof posthog !== "undefined" && posthog) {
+    posthog.capture("checkout_started");
+  }
 
   try {
     const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
