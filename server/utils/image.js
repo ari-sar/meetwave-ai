@@ -236,7 +236,7 @@ async function runImageEdit(referencePaths, prompt, sessionId, filename) {
 
   console.log(`☁️  Uploaded to R2: ${r2Key}`);
   return {
-    url: `${process.env.R2_PUBLIC_URL}/${r2Key}`,
+    url: `/${r2Key}`,
     r2Key
   };
 }

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A premium AI-powered style analysis platform. Users upload a portrait, get a single 12-style comparison card (soft-blurred). They pay ₹19 via Razorpay to unlock + download the high-res PNG.
+A premium AI-powered style analysis platform. Users upload a portrait, get a single 16-style comparison card (soft-blurred, now with identity-locked face via dual-image reference). They pay ₹49 via Razorpay to unlock + download the high-res PNG.
 
 ## Stack
 
@@ -10,8 +10,8 @@ A premium AI-powered style analysis platform. Users upload a portrait, get a sin
 |---|---|
 | Backend | Node.js + Express.js, entry at `server/index.js`, port 5000 |
 | Database | MongoDB Atlas via Mongoose — `Session` + `Job` models |
-| AI (vision) | OpenAI GPT-4o (`analyzePortrait` in `server/utils/image.js`) |
-| AI (image) | OpenAI `images.edit` with DALL-E 2 (`runImageEdit`) |
+| AI (vision) | OpenAI GPT-4o vision (`analyzePortrait` in `server/utils/image.js`) |
+| AI (image) | OpenAI `images.edit` with gpt-image-1.5, dual-image reference for face lock (`runImageEdit`) |
 | Payments | Razorpay Checkout + webhook (`server/routes/payment.js`) |
 | Auth | JWT secret + device fingerprinting (no login flow) |
 | Frontend | Vanilla JS SPA + custom CSS (light Gen-Z theme) |
@@ -33,7 +33,7 @@ meetwave-ai/
 │   │   ├── payment.js          # POST /create-order, POST /confirm (HMAC verify), webhookHandler (raw body)
 │   │   └── verify.js           # GET /:token — validates token, streams comparison.png as attachment
 │   └── utils/
-│       ├── image.js            # GPT-4o portrait analysis + DALL-E 2 single comparison card with stage callback
+│       ├── image.js            # GPT-4o portrait analysis + gpt-image-1.5 16-style card with dual-image face lock + stage callback
 │       └── hash.js             # SHA-256 helpers (used for download token)
 ├── client/
 │   ├── index.html              # Light theme, sample slider, upload, skeleton loader, results, Razorpay Checkout
@@ -57,11 +57,11 @@ meetwave-ai/
 ## Core Flow
 
 1. User uploads portrait → `POST /api/generate` returns `{ jobId }` immediately.
-2. Worker (`runJob` in `routes/generate.js`) calls `generatePreview` which: GPT-4o analyzes → sharp normalises → DALL-E 2 creates the 12-style comparison card.
+2. Worker (`runJob` in `routes/generate.js`) calls `generatePreview` which: GPT-4o analyzes → sharp normalises + crops face → gpt-image-1.5 creates the 16-style comparison card (dual-image reference locks facial identity).
 3. Client polls `/api/generate/status/:jobId` every 3s, advances skeleton caption from `stage`.
-4. On `done`, results are rendered with soft 8px blur + lock chip.
-5. User clicks Unlock → `create-order` → Razorpay Checkout opens → success handler hits `/confirm` (signature verified) → image unblurs + download button reveals.
-6. Razorpay webhook is the server-side source of truth (sets `paid` even if user closes tab).
+4. On `done`, results are rendered with soft 8px blur + lock chip. Client also checks `/api/payment/status/:sessionId` to auto-unlock if already paid.
+5. User clicks Unlock → `create-order` → Razorpay Checkout opens → success handler hits `/confirm` (signature verified) → Device unlocked, image unblurs + download button reveals.
+6. Razorpay webhook is the server-side source of truth (unlocks Device, sets `paid` even if user closes tab).
 
 ## Key Patterns
 
@@ -100,6 +100,12 @@ npm start        # production server
 - Razorpay webhook URL: `https://ai.meetwavedigital.in/api/payment/webhook`.
 - Helmet enabled; CSP currently disabled because Razorpay Checkout + Google Fonts CDN need allowlisting — tighten before launch.
 
+## Recent Changes (May 2026)
+
+- **Device locking + payment flow fix** (paid-user paywall regression): Fixed 3 critical bugs where paying users saw the paywall again after refresh. Device unlock now correctly matches Job by sessionId, session-check self-heals stale locks, and pollJob checks payment status before showing paywall.
+- **Face identity lock via dual-image reference** (current): COMPARISON_PROMPT rewritten with IDENTITY first + imperative anti-stylization; `cropFaceRegion` helper extracts face crop; `runImageEdit` now passes both full portrait and face crop to gpt-image-1.5.
+- **GPT-4o vision refusal fix** (shipped): Reframed `analyzePortrait` prompt as pure styling (not person analysis); added JSON mode + retry + fallback.
+
 ## graphify
 
-This project has a graphify knowledge graph at graphify-out/. Re-run `graphify update .` after major refactors so god nodes/communities reflect reality. The current graph.json is stale — it still references Stripe and the old per-style generation flow; regenerate after this change set.
+This project has a graphify knowledge graph at graphify-out/. Re-run `/graphify update .` after major refactors so communities reflect reality.
