@@ -43,6 +43,15 @@ router.get("/session-check", async (req, res) => {
   try {
     const device = await Device.findOne({ fingerprint, ip });
     if (device && device.isLocked) {
+      // Self-heal: if the linked session is already paid, unlock so they can generate again
+      const job = device.unpaidJobId ? await Job.findById(device.unpaidJobId).lean() : null;
+      const session = job?.result?.sessionId
+        ? await Session.findOne({ lastSessionId: job.result.sessionId }).lean()
+        : null;
+      if (session?.paid) {
+        await Device.updateOne({ _id: device._id }, { $set: { isLocked: false, unpaidJobId: null } });
+        return res.json({ locked: false });
+      }
       return res.json({ locked: true, lastJobId: device.unpaidJobId });
     }
     res.json({ locked: false });

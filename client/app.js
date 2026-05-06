@@ -195,11 +195,22 @@ function pollJob(jobId) {
         currentSessionId = data.result.sessionId;
         document.getElementById("loadingState").classList.add("hidden");
         document.getElementById("resultsSection").classList.remove("hidden");
-        document.getElementById("unlockSection").classList.remove("hidden");
         renderComparison(data.result);
         renderMetadata(data.result);
-        if (typeof posthog !== "undefined" && posthog) {
-          posthog.capture("paywall_viewed");
+
+        // Check if this session was already paid (e.g. returning user after refresh)
+        const payStatus = await fetch(`${API_BASE}/api/payment/status/${data.result.sessionId}`)
+          .then(r => r.json()).catch(() => ({}));
+        if (payStatus.paid && payStatus.downloadToken) {
+          unlockComparison();
+          const dl = document.getElementById("downloadBtn");
+          dl.href = `${API_BASE}/api/verify/${payStatus.downloadToken}`;
+          dl.classList.remove("hidden");
+        } else {
+          document.getElementById("unlockSection").classList.remove("hidden");
+          if (typeof posthog !== "undefined" && posthog) {
+            posthog.capture("paywall_viewed");
+          }
         }
         unlockUI();
         return;

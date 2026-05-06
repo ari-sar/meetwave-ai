@@ -2,7 +2,8 @@ const express = require("express");
 const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const Session = require("../models/Session");
-const Device = require("../models/Device"); // Import persistent device model
+const Device = require("../models/Device");
+const Job = require("../models/Job");
 const { generateHash } = require("../utils/hash");
 
 const router = express.Router();
@@ -61,13 +62,7 @@ router.post("/confirm", async (req, res) => {
     }
 
     const session = await markSessionPaid(sessionId);
-    
-    // UNLOCK DEVICE: Race condition safeguard 
-    await Device.findOneAndUpdate(
-      { unpaidJobId: sessionId }, 
-      { $set: { isLocked: false, unpaidJobId: null } }
-    );
-
+    await unlockDeviceForSession(sessionId);
     res.json({ downloadToken: session.downloadToken });
   } catch (error) {
     console.error("Payment confirm error:", error.message);
@@ -101,13 +96,7 @@ async function webhookHandler(req, res) {
       }
       
       await markSessionPaid(sessionId);
-      
-      // UNLOCK DEVICE: User paid, they can generate again
-      await Device.findOneAndUpdate(
-        { unpaidJobId: sessionId }, 
-        { $set: { isLocked: false, unpaidJobId: null } }
-      );
-      
+      await unlockDeviceForSession(sessionId);
       console.log(`✓ Webhook: session ${sessionId} marked paid and device unlocked`);
     } else {
       console.log(`Webhook event ignored: ${event}`);
@@ -117,6 +106,20 @@ async function webhookHandler(req, res) {
   } catch (error) {
     console.error("Webhook error:", error.stack);
     res.status(500).send("error");
+  }
+}
+
+async function unlockDeviceForSession(sessionId) {
+  try {
+    const job = await Job.findOne({ 'result.sessionId': sessionId }).lean();
+    if (job) {
+      await Device.findOneAndUpdate(
+        { unpaidJobId: job._id.toString() },
+        { $set: { isLocked: false, unpaidJobId: null } }
+      );
+    }
+  } catch (e) {
+    console.error("Device unlock failed:", e.message);
   }
 }
 
