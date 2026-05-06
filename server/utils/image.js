@@ -160,53 +160,152 @@ async function cropFaceRegion(preparedPath) {
   return outPath;
 }
 
-const COMPARISON_PROMPT = `IDENTITY (HIGHEST PRIORITY — non-negotiable):
-The face in EVERY cell is EXACTLY the face from the input photos. Two reference images are attached: the full portrait and a tight face crop. Lock identity from both.
+const COMPARISON_PROMPT = `Create a high-resolution fashion collage using the provided reference images.
 
-Preserve, feature-for-feature:
-- Eye shape, eye color, eye spacing
-- Nose shape, nostril width, bridge profile
-- Mouth shape, lip thickness, lip color
-- Jawline, chin shape, cheekbone structure
-- Eyebrow shape and density
-- Ear shape and position
-- Skin tone, skin texture, freckles, moles, scars
-- Apparent age, gender, ethnicity
-- Hair color and natural hair texture (styling may vary per cell)
+IDENTITY LOCK — HIGHEST PRIORITY:
+The person in every cell MUST be exactly the same person from the reference photos.
 
-DO NOT idealize, slim, smooth, lighten, beautify, glamourize, retouch, or "fashion-model-ize" the face.
-DO NOT swap any feature for a stock/generic version.
-DO NOT change apparent age, gender, or ethnicity.
-DO NOT alter the face shape to look more symmetrical or "magazine-ready."
-The face is fixed. Only outfit, hair styling, and per-cell color/lighting may vary.
+Treat the face as immutable reference content; only the outfit and styling are editable.
 
-Failure mode = changing the face. Pass mode = same person, same face, 16 different outfits.
+Preserve exactly:
+- eye shape, eye size, eye spacing, iris color
+- nose bridge, nostril width, nose tip shape
+- lip shape, lip fullness, mouth width
+- jawline, chin shape, cheekbone structure
+- eyebrow shape and density
+- ear shape and placement
+- skin tone, skin texture, pores, under-eye shape, natural asymmetry
+- facial proportions and overall head shape
+- apparent age, ethnicity, and gender presentation
+- natural hairline
+
+Hard identity rules:
+- Do NOT beautify the face.
+- Do NOT glamorize the face.
+- Do NOT replace the face with a generic attractive face.
+- Do NOT alter facial proportions.
+- Do NOT slim the face.
+- Do NOT smooth skin excessively.
+- Do NOT sharpen or stylize facial features.
+- Do NOT make the person look younger or older.
+- Do NOT increase facial symmetry.
+- Do NOT re-render the face from scratch.
+- Do NOT apply “AI beauty filter” aesthetics.
+- Do NOT modify the identity for cinematic or editorial styling.
+- Keep facial geometry identical across all 16 cells.
+
+FACE CONSISTENCY RULE:
+The face must remain visually identical in every cell.
+Only these elements may change:
+- clothing
+- hairstyle
+- accessories
+- makeup styling
+- lighting on clothing/background only
+
+The identity must remain stable across all 16 portraits.
+
+REFERENCE PRIORITY:
+Use the uploaded images as hard identity references.
+The tight face crop is for identity preservation only.
+Do not reinterpret or redesign the face.
 
 LAYOUT (mandatory):
-- 4 columns × 4 rows = 16 cells. No 5th row.
-- Top header band: centered "Outfit Analysis" in refined serif italic, ink-dark on off-white (#FAFAF7).
-- Each cell: one styled portrait + one short style-name label below. No rating words, no descriptions.
-- Equal-sized cells, small uniform gutters, all 16 fully visible and unclipped.
-- After Bollywood Glam (cell 16, bottom-right), the image ends. Any space below row 4 = solid #FAFAF7.
+- 4 columns × 4 rows = 16 cells exactly
+- No extra row
+- No cropped cells
+- Equal-sized cells with uniform spacing
+- Clean off-white background (#FAFAF7)
 
-FRAMING (every cell):
-- Waist-up half-body. From just above the head down to mid-torso/waist. No legs, no hips, no full body.
-- Subject centered, facing camera, neutral pose, arms relaxed.
+HEADER:
+Top centered title:
+“Outfit Analysis”
 
-STYLES (in order, top-left to bottom-right, row by row):
-Row 1: Korean, Streetwear, Tea-toned, Chic
-Row 2: Luxury, Indian Style, Baddie, Niche/Indie
-Row 3: Vintage, Gen-Z, Sporty, Old Money
-Row 4 (FINAL): Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
+Typography:
+- refined serif italic
+- elegant editorial style
+- dark ink color
+- centered in top header band
 
-LIGHTING & COLOR (apply to clothing/background only — NEVER to the face):
-- Bright, high-key studio. Daylight-balanced ~5500K. Soft even shadows.
-- Off-white (#FAFAF7) seamless background, identical in every cell.
-- Identical brightness, contrast, saturation, white balance across all 16.
-- Discard the input photo's lighting, ambient color, and background — re-light the SCENE, not the face.
-- The face must remain the same person under any lighting; never re-render facial features for a "studio look."
+CELL STRUCTURE:
+Each cell contains:
+- one waist-up portrait
+- one short style-name label below
 
-Magazine-quality, high resolution, suitable for sharing.`;
+No descriptions.
+No ratings.
+No extra text.
+
+FRAMING:
+- waist-up half-body framing only
+- subject centered
+- facing camera
+- neutral relaxed pose
+- from slightly above head down to mid-torso/waist
+- no full-body framing
+- no dramatic perspective distortion
+
+BACKGROUND:
+- seamless off-white studio background (#FAFAF7)
+- identical background in every cell
+- minimal editorial studio aesthetic
+
+LIGHTING:
+- soft daylight-balanced studio lighting (~5500K)
+- bright high-key studio setup
+- soft natural shadows
+- consistent brightness and white balance across all 16 cells
+
+IMPORTANT:
+Apply lighting adjustments only to clothing and environment.
+Preserve the original facial identity and facial structure.
+Do not use studio lighting as justification to redesign facial features.
+
+STYLES (left-to-right, top-to-bottom):
+
+Row 1:
+1. Korean
+2. Streetwear
+3. Tea-toned
+4. Chic
+
+Row 2:
+5. Luxury
+6. Indian Style
+7. Baddie
+8. Niche/Indie
+
+Row 3:
+9. Vintage
+10. Gen-Z
+11. Sporty
+12. Old Money
+
+Row 4:
+13. Athleisure
+14. Indo-Western Fusion
+15. Y2K Revival
+16. Bollywood Glam
+
+STYLE EXECUTION:
+Each style should differ through:
+- clothing
+- color palette
+- layering
+- accessories
+- hairstyle
+- fashion mood
+
+But NEVER through facial redesign.
+
+QUALITY TARGET:
+Photorealistic.
+Identity-preserving.
+Editorial fashion collage.
+Clean composition.
+Consistent studio presentation.
+Natural human realism.
+No uncanny AI face artifacts.`;
 
 async function runImageEdit(referencePaths, prompt, sessionId, filename) {
   const files = await Promise.all(
@@ -241,7 +340,7 @@ async function runImageEdit(referencePaths, prompt, sessionId, filename) {
   };
 }
 
-async function generatePreview(imagePath, onStage = async () => {}) {
+async function generatePreview(imagePath, onStage = async () => { }) {
   try {
     console.log("📸 Starting full comparison generation (single AI call, all 16 styles)...");
 
