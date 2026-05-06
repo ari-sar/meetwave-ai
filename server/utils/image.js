@@ -143,46 +143,81 @@ async function prepareImageForEdit(imagePath) {
   return outPath;
 }
 
-const COMPARISON_PROMPT = `Create a personal outfit analysis card from the uploaded portrait.
+async function cropFaceRegion(preparedPath) {
+  const outPath = path.join(os.tmpdir(), `face-${uuidv4()}.png`);
+  const meta = await sharp(preparedPath).metadata();
+  const cropSide = Math.min(meta.width, Math.round(meta.height * 0.55));
+  const left = Math.round((meta.width - cropSide) / 2);
+  const top = Math.round(meta.height * 0.05);
+
+  await sharp(preparedPath)
+    .extract({ left, top, width: cropSide, height: cropSide })
+    .resize(1024, 1024, { fit: "cover" })
+    .png()
+    .toFile(outPath);
+
+  console.log(`🔍 Face reference crop: ${outPath}`);
+  return outPath;
+}
+
+const COMPARISON_PROMPT = `IDENTITY (HIGHEST PRIORITY — non-negotiable):
+The face in EVERY cell is EXACTLY the face from the input photos. Two reference images are attached: the full portrait and a tight face crop. Lock identity from both.
+
+Preserve, feature-for-feature:
+- Eye shape, eye color, eye spacing
+- Nose shape, nostril width, bridge profile
+- Mouth shape, lip thickness, lip color
+- Jawline, chin shape, cheekbone structure
+- Eyebrow shape and density
+- Ear shape and position
+- Skin tone, skin texture, freckles, moles, scars
+- Apparent age, gender, ethnicity
+- Hair color and natural hair texture (styling may vary per cell)
+
+DO NOT idealize, slim, smooth, lighten, beautify, glamourize, retouch, or "fashion-model-ize" the face.
+DO NOT swap any feature for a stock/generic version.
+DO NOT change apparent age, gender, or ethnicity.
+DO NOT alter the face shape to look more symmetrical or "magazine-ready."
+The face is fixed. Only outfit, hair styling, and per-cell color/lighting may vary.
+
+Failure mode = changing the face. Pass mode = same person, same face, 16 different outfits.
 
 LAYOUT (mandatory):
-- The canvas contains exactly 4 columns × 4 rows = 16 cells. There is no 5th row. Do not add a 5th row.
-- Every cell contains exactly one styled portrait. Total portraits = 16.
-- At the very top of the canvas, a header band with the centered text "Outfit Analysis" in a refined serif italic typeface, ink-dark color on off-white (#FAFAF7) background.
-- Below the header band: portraits and style-name labels only.
-- Below each cell, one short style-name label only. No rating words, no descriptions.
-- All 16 cells fully visible and unclipped. Equal-sized cells, small uniform gutters.
-- After Bollywood Glam (cell 16, bottom-right), the image ends. Do not add any more portraits.
+- 4 columns × 4 rows = 16 cells. No 5th row.
+- Top header band: centered "Outfit Analysis" in refined serif italic, ink-dark on off-white (#FAFAF7).
+- Each cell: one styled portrait + one short style-name label below. No rating words, no descriptions.
+- Equal-sized cells, small uniform gutters, all 16 fully visible and unclipped.
+- After Bollywood Glam (cell 16, bottom-right), the image ends. Any space below row 4 = solid #FAFAF7.
 
-FRAMING (mandatory for every cell):
-- Waist-up half-body shot only. Frame from just above the head down to roughly mid-torso/waist. Do NOT show legs, hips, or full body.
-- Subject centered in each cell, facing camera, neutral pose, arms relaxed.
+FRAMING (every cell):
+- Waist-up half-body. From just above the head down to mid-torso/waist. No legs, no hips, no full body.
+- Subject centered, facing camera, neutral pose, arms relaxed.
 
-HARD STOP RULE: Bollywood Glam is the 16th and final portrait. Render nothing after it. Any space below row 4 must be solid off-white (#FAFAF7) — no faces, no heads, no extra portraits.
-
-STYLES (in this exact order, top-left to bottom-right, row by row):
+STYLES (in order, top-left to bottom-right, row by row):
 Row 1: Korean, Streetwear, Tea-toned, Chic
 Row 2: Luxury, Indian Style, Baddie, Niche/Indie
 Row 3: Vintage, Gen-Z, Sporty, Old Money
-Row 4 (FINAL ROW): Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
+Row 4 (FINAL): Athleisure, Indo-Western Fusion, Y2K Revival, Bollywood Glam
 
-IDENTITY: Preserve the subject's facial features, skin tone, face shape, and hair across all 16 cells. Same person, 16 different outfits.
+LIGHTING & COLOR (apply to clothing/background only — NEVER to the face):
+- Bright, high-key studio. Daylight-balanced ~5500K. Soft even shadows.
+- Off-white (#FAFAF7) seamless background, identical in every cell.
+- Identical brightness, contrast, saturation, white balance across all 16.
+- Discard the input photo's lighting, ambient color, and background — re-light the SCENE, not the face.
+- The face must remain the same person under any lighting; never re-render facial features for a "studio look."
 
-LIGHTING & COLOR (mandatory — DO NOT inherit from input):
-- Bright, high-key studio photography. Daylight-balanced (~5500K). Soft, even shadows.
-- Off-white (#FAFAF7) seamless background in every cell, identical across all 16.
-- Identical brightness, contrast, saturation, and white balance in every cell.
-- Treat the input photo ONLY as a reference for the subject's identity. Discard its lighting, ambient color, background, and tone entirely.
-- Outfits must look freshly photographed in a controlled studio — never dim, warm-cast, low-key, or environmental.
+Magazine-quality, high resolution, suitable for sharing.`;
 
-Clean, fashionable, magazine-quality. High resolution. Suitable for sharing.`;
-
-async function runImageEdit(preparedPath, prompt, sessionId, filename) {
-  const preparedBuffer = fs.readFileSync(preparedPath);
+async function runImageEdit(referencePaths, prompt, sessionId, filename) {
+  const files = await Promise.all(
+    referencePaths.map((p, i) =>
+      toFile(fs.readFileSync(p), `ref-${i}.png`, { type: "image/png" })
+    )
+  );
 
   const response = await openai.images.edit({
     model: "gpt-image-1.5",
-    image: await toFile(preparedBuffer, "portrait.png", { type: "image/png" }),
+    image: files,
     prompt,
     n: 1,
     size: "auto"
@@ -216,10 +251,16 @@ async function generatePreview(imagePath, onStage = async () => {}) {
 
     await onStage("preparing");
     const preparedPath = await prepareImageForEdit(imagePath);
+    const facePath = await cropFaceRegion(preparedPath);
 
     console.log(`🎨 Generating comparison card with all 16 styles...`);
     await onStage("generating");
-    const { url: comparisonUrl } = await runImageEdit(preparedPath, COMPARISON_PROMPT, sessionId, "comparison.png");
+    const { url: comparisonUrl } = await runImageEdit(
+      [preparedPath, facePath],
+      COMPARISON_PROMPT,
+      sessionId,
+      "comparison.png"
+    );
 
     console.log("✅ Comparison card generated");
     return {
