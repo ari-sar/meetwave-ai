@@ -116,6 +116,9 @@ function renderComparison(data) {
       </div>
     </div>
   `;
+  container.querySelector(".lock-chip")?.addEventListener("click", () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  });
 }
 
 function unlockComparison() {
