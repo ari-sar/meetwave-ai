@@ -132,6 +132,9 @@ function unlockComparison() {
     setTimeout(() => overlay.remove(), 1200);
   }
 
+  const disclaimer = document.getElementById("aiDisclaimer");
+  if (disclaimer) disclaimer.classList.remove("hidden");
+
   const pill = document.querySelector(".unlock-headline .lock-pill");
   if (pill) pill.textContent = "✓ Unlocked";
   const headline = document.querySelector(".unlock-headline h3");

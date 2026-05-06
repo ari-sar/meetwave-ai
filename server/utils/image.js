@@ -196,12 +196,15 @@ Hard identity rules:
 
 FACE CONSISTENCY RULE:
 The face must remain visually identical in every cell.
+
 Only these elements may change:
 - clothing
 - hairstyle
 - accessories
 - makeup styling
-- lighting on clothing/background only
+- environment
+- background
+- outfit lighting
 
 The identity must remain stable across all 16 portraits.
 
@@ -215,7 +218,8 @@ LAYOUT (mandatory):
 - No extra row
 - No cropped cells
 - Equal-sized cells with uniform spacing
-- Clean off-white background (#FAFAF7)
+- All 16 cells fully visible
+- Clean premium collage composition
 
 HEADER:
 Top centered title:
@@ -223,7 +227,7 @@ Top centered title:
 
 Typography:
 - refined serif italic
-- elegant editorial style
+- elegant clean editorial typography
 - dark ink color
 - centered in top header band
 
@@ -244,22 +248,51 @@ FRAMING:
 - from slightly above head down to mid-torso/waist
 - no full-body framing
 - no dramatic perspective distortion
+- consistent camera angle across all 16 cells
 
 BACKGROUND:
-- seamless off-white studio background (#FAFAF7)
-- identical background in every cell
-- minimal editorial studio aesthetic
+Each style should have its own environment and background aesthetic appropriate to that fashion style.
+
+The background must support the outfit mood while remaining clean, realistic, and non-distracting.
+
+Examples:
+- Korean → soft minimalist café or muted Seoul-style interior
+- Streetwear → urban wall, subway, industrial texture
+- Tea-toned → warm earthy indoor setting
+- Chic → luxury modern fashion backdrop
+- Luxury → upscale hotel or refined neutral interior
+- Indian Style → elegant Indian interior textures or festive tones
+- Baddie → dark modern studio with confident fashion mood
+- Niche/Indie → creative artistic backdrop
+- Vintage → retro-inspired warm-toned environment
+- Gen-Z → playful trendy youthful setting
+- Sporty → athletic minimal environment
+- Old Money → refined heritage-inspired neutral setting
+- Athleisure → clean wellness or gym-inspired environment
+- Indo-Western Fusion → blended modern + ethnic backdrop
+- Y2K Revival → glossy early-2000s-inspired colorful setting
+- Bollywood Glam → cinematic luxury fashion backdrop
+
+Background rules:
+- Keep all backgrounds softly blurred or depth-of-field controlled.
+- Backgrounds must never overpower the subject.
+- Maintain consistent framing and lighting quality across all 16 cells.
+- Preserve the exact same face regardless of environment.
+- Avoid dramatic cinematic shadows on the face.
+- Avoid excessive color casts on skin.
 
 LIGHTING:
-- soft daylight-balanced studio lighting (~5500K)
-- bright high-key studio setup
-- soft natural shadows
-- consistent brightness and white balance across all 16 cells
+- soft natural fashion lighting
+- realistic balanced exposure
+- soft shadows
+- consistent image quality across all 16 cells
+- realistic skin rendering
+- natural skin texture retention
 
-IMPORTANT:
-Apply lighting adjustments only to clothing and environment.
-Preserve the original facial identity and facial structure.
-Do not use studio lighting as justification to redesign facial features.
+IMPORTANT LIGHTING RULE:
+Apply stylistic lighting and color grading primarily to clothing and background while preserving the original facial identity, facial proportions, skin texture, and facial details.
+
+Do not use lighting as justification to redesign facial features.
 
 STYLES (left-to-right, top-to-bottom):
 
@@ -290,22 +323,28 @@ Row 4:
 STYLE EXECUTION:
 Each style should differ through:
 - clothing
-- color palette
 - layering
+- fabrics
 - accessories
 - hairstyle
 - fashion mood
+- environment
+- color palette
 
 But NEVER through facial redesign.
+
+Fashion styling must come from outfit design, styling, accessories, color palette, and environment — NOT from altering the person's facial attractiveness or facial structure.
 
 QUALITY TARGET:
 Photorealistic.
 Identity-preserving.
-Editorial fashion collage.
-Clean composition.
-Consistent studio presentation.
 Natural human realism.
-No uncanny AI face artifacts.`;
+Consistent composition.
+Realistic skin texture.
+No uncanny AI face artifacts.
+No beauty-filter appearance.
+No plastic skin.
+No face swapping.`;
 
 async function runImageEdit(referencePaths, prompt, sessionId, filename) {
   const files = await Promise.all(

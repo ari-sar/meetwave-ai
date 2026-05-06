@@ -25,6 +25,7 @@ html, body {
 
 .hidden { display: none !important; }
 .muted { color: var(--ink-soft); font-size: 0.9rem; }
+.ai-disclaimer { font-size: 0.78rem; color: var(--ink-soft); opacity: 0.6; text-align: center; margin-top: 12px; padding: 0 8px; }
 
 /* Nav */
 .topbar {
